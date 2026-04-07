@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 // --- STYLING CONSTANTS ---
 const inputStyles = "w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-600 transition-all placeholder:text-slate-300";
@@ -11,10 +12,50 @@ const email = ref('');
 const password = ref('');
 const rememberMe = ref(false);
 const showPassword = ref(false);
+const isSubmitting = ref(false);
+const errorMessage = ref('');
+const successMessage = ref('');
+const router = useRouter();
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 // --- METHODS ---
-const handleLogin = () => {
-    console.log('Logging in with:', email.value, 'Remember:', rememberMe.value);
+const handleLogin = async () => {
+    errorMessage.value = '';
+    successMessage.value = '';
+    isSubmitting.value = true;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                email: email.value.trim(),
+                password: password.value
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Login failed.');
+        }
+
+        const displayName = data.user.full_name || data.user.business_name || data.user.email;
+        localStorage.setItem('currentUser', JSON.stringify(data.user));
+        successMessage.value = `Welcome back, ${displayName}.`;
+        email.value = '';
+        password.value = '';
+
+        setTimeout(() => {
+            router.push('/dashboard');
+        }, 800);
+    } catch (error) {
+        errorMessage.value = error.message;
+    } finally {
+        isSubmitting.value = false;
+    }
 };
 
 const loginWithGoogle = () => console.log('Google login');
@@ -25,7 +66,7 @@ const togglePassword = () => { showPassword.value = !showPassword.value; };
 <template>
   <div class="min-h-screen bg-slate-50 flex items-center justify-center p-4 lg:p-8 font-sans antialiased animate-slideUp">
     
-    <div class="w-full max-w-6xl bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200 flex overflow-hidden min-h-[750px]">
+    <div class="w-full max-w-6xl bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200 flex overflow-hidden min-h-187.5">
       
       <div class="hidden lg:block w-[45%] relative">
         <img 
@@ -34,8 +75,10 @@ const togglePassword = () => { showPassword.value = !showPassword.value; };
           alt="Login background"
         />
         <div class="absolute top-10 left-10">
-          <div class="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20">
-             <span class="text-white font-black text-2xl italic tracking-tighter">F</span>
+          <div class="rounded-2xl border border-white/20 bg-white/10 px-5 py-3 backdrop-blur-md">
+             <span class="text-2xl font-black uppercase italic tracking-tighter text-white">
+               Fin<span class="text-blue-400">Flow</span>
+             </span>
           </div>
         </div>
         <div class="absolute bottom-12 left-10 right-10">
@@ -51,6 +94,11 @@ const togglePassword = () => { showPassword.value = !showPassword.value; };
         <div class="flex-1 flex flex-col justify-center max-w-md mx-auto w-full">
           
           <div class="mb-10 text-center lg:text-left">
+            <div class="mb-5 inline-flex rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2">
+              <span class="text-xl font-black uppercase italic tracking-tighter text-slate-900">
+                Fin<span class="text-blue-600">Flow</span>
+              </span>
+            </div>
             <h1 class="text-3xl font-black text-slate-900 mb-2 tracking-tight">Log In</h1>
             <p class="text-slate-500 text-sm font-medium">Please enter your details to access your account.</p>
           </div>
@@ -98,11 +146,20 @@ const togglePassword = () => { showPassword.value = !showPassword.value; };
               </label>
             </div>
 
+            <p v-if="errorMessage" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+              {{ errorMessage }}
+            </p>
+
+            <p v-if="successMessage" class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+              {{ successMessage }}
+            </p>
+
             <button 
               type="submit"
-              class="w-full py-4 rounded-xl font-bold text-sm bg-blue-600 text-white shadow-xl shadow-blue-100 hover:bg-blue-700 active:scale-[0.98] transition-all duration-300"
+              :disabled="isSubmitting"
+              class="w-full py-4 rounded-xl font-bold text-sm bg-blue-600 text-white shadow-xl shadow-blue-100 hover:bg-blue-700 active:scale-[0.98] transition-all duration-300 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
             >
-              Log In
+              {{ isSubmitting ? 'Logging in...' : 'Log In' }}
             </button>
           </form>
 

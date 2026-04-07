@@ -10,13 +10,13 @@
 
 <script setup>
 import { onMounted } from "vue"
-import CopyrightFooter from "@/components/copyrightfooter.vue"
-import MenuHero from "@/components/menuhero.vue"
-import OnboardingHero from "@/components/onboardingHero.vue"
-import hero2 from "@/components/hero2.vue"
-import  SponsorHero from "@/components/sponsorhero.vue"
-import ReviewHero from "@/components/reviewhero.vue"
-import Trialbox from "@/components/trialbox.vue"
+import CopyrightFooter from "@/components/home/copyrightfooter.vue"
+import MenuHero from "@/components/home/menuhero.vue"
+import OnboardingHero from "@/components/home/onboardingHero.vue"
+import hero2 from "@/components/home/hero2.vue"
+import SponsorHero from "@/components/home/sponsorhero.vue"
+import ReviewHero from "@/components/home/reviewhero.vue"
+import Trialbox from "@/components/home/trialbox.vue"
 const toggleDark = () => {
   const html = document.documentElement
 

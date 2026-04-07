@@ -1,0 +1,464 @@
+import express from 'express';
+import pkg from 'pg';
+import cors from 'cors';
+import crypto from 'crypto';
+
+const { Pool } = pkg;
+
+const app = express();
+const PORT = 3000;
+const VALID_PROCESS_STATUSES = new Set(['pending', 'in_progress', 'completed']);
+const VALID_TRANSACTION_TYPES = new Set(['Revenue', 'Expense', 'Receivable', 'Payable']);
+const VALID_TRANSACTION_STATUSES = new Set([
+    'Cleared',
+    'Processed',
+    'Pending',
+    'Scheduled',
+    'Overdue',
+    'Due Soon',
+    'Open',
+    'Urgent',
+    'Upcoming'
+]);
+
+app.use(cors());
+app.use(express.json());
+
+const pool = new Pool({
+    host: 'localhost',
+    port: 5432,
+    user: 'postgres',
+    password: 'postgres',
+    database: 'demographic'
+});
+
+const ensureDatabaseSchema = async () => {
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS users (
+            user_id SERIAL PRIMARY KEY,
+            full_name TEXT,
+            business_name TEXT,
+            email TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            account_type TEXT NOT NULL DEFAULT 'client',
+            business_type TEXT,
+            city TEXT,
+            phone TEXT,
+            last_login TIMESTAMP,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS processes (
+            process_id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+            title TEXT NOT NULL,
+            description TEXT,
+            status TEXT NOT NULL DEFAULT 'pending',
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS bookkeeping_transactions (
+            transaction_id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+            party_name TEXT NOT NULL,
+            category TEXT NOT NULL,
+            entry_type TEXT NOT NULL,
+            amount NUMERIC(12, 2) NOT NULL CHECK (amount >= 0),
+            payment_method TEXT,
+            transaction_date DATE NOT NULL DEFAULT CURRENT_DATE,
+            due_date DATE,
+            status TEXT NOT NULL DEFAULT 'Pending',
+            notes TEXT,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+};
+
+const hashPassword = (password) => {
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+    return `${salt}:${hash}`;
+};
+
+const verifyPassword = (password, storedHash) => {
+    if (!storedHash?.includes(':')) {
+        return password === storedHash;
+    }
+
+    const [salt, savedHash] = storedHash.split(':');
+
+    if (!salt || !savedHash) {
+        return false;
+    }
+
+    const hashBuffer = crypto.scryptSync(password, salt, 64);
+    const savedHashBuffer = Buffer.from(savedHash, 'hex');
+
+    if (hashBuffer.length !== savedHashBuffer.length) {
+        return false;
+    }
+
+    return crypto.timingSafeEqual(hashBuffer, savedHashBuffer);
+};
+
+const signupHandler = async (req, res) => {
+    const {
+        fullName,
+        businessName,
+        email,
+        password,
+        accountType,
+        businessType,
+        city,
+        phone
+    } = req.body;
+
+    try {
+        const normalizedAccountType = accountType === 'business' ? 'business' : 'client';
+        const resolvedFullName = normalizedAccountType === 'client' ? fullName?.trim() : null;
+        const resolvedBusinessName = normalizedAccountType === 'business' ? businessName?.trim() : null;
+
+        if ((!resolvedFullName && !resolvedBusinessName) || !email || !password) {
+            return res.status(400).json({ error: 'Name, email, and password are required.' });
+        }
+
+        const normalizedEmail = email.toLowerCase();
+        const existingUser = await pool.query(
+            'SELECT user_id FROM users WHERE email = $1',
+            [normalizedEmail]
+        );
+
+        if (existingUser.rowCount > 0) {
+            return res.status(409).json({ error: 'An account with this email already exists.' });
+        }
+
+        const result = await pool.query(
+            `
+                INSERT INTO users (
+                    full_name,
+                    business_name,
+                    email,
+                    password_hash,
+                    account_type,
+                    business_type,
+                    city,
+                    phone
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                RETURNING user_id, full_name, business_name, email, account_type, business_type, city, phone
+            `,
+            [
+                resolvedFullName,
+                resolvedBusinessName,
+                normalizedEmail,
+                hashPassword(password),
+                normalizedAccountType,
+                normalizedAccountType === 'business' ? businessType || null : null,
+                normalizedAccountType === 'client' ? city || null : null,
+                normalizedAccountType === 'client' ? phone || null : null
+            ]
+        );
+
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('Database error:', err.message);
+        res.status(500).json({
+            error: 'Signup failed. Check that your table columns match the server.',
+            details: process.env.NODE_ENV === 'production' ? undefined : err.message
+        });
+    }
+};
+
+const loginHandler = async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Email and password are required.' });
+        }
+
+        const result = await pool.query(
+            `
+                SELECT
+                    user_id,
+                    full_name,
+                    business_name,
+                    email,
+                    password_hash,
+                    account_type,
+                    business_type,
+                    city,
+                    phone
+                FROM users
+                WHERE email = $1
+            `,
+            [email.toLowerCase()]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(401).json({ error: 'Invalid email or password.' });
+        }
+
+        const user = result.rows[0];
+
+        if (!verifyPassword(password, user.password_hash)) {
+            return res.status(401).json({ error: 'Invalid email or password.' });
+        }
+
+        await pool.query(
+            'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE user_id = $1',
+            [user.user_id]
+        );
+
+        res.status(200).json({
+            message: 'Login successful',
+            user: {
+                user_id: user.user_id,
+                email: user.email,
+                full_name: user.full_name,
+                business_name: user.business_name,
+                account_type: user.account_type,
+                business_type: user.business_type,
+                city: user.city,
+                phone: user.phone
+            }
+        });
+    } catch (err) {
+        console.error('Database error:', err.message);
+        res.status(500).json({
+            error: 'Login failed',
+            details: process.env.NODE_ENV === 'production' ? undefined : err.message
+        });
+    }
+};
+
+app.post('/signup', signupHandler);
+app.post('/api/auth/signup', signupHandler);
+
+app.post('/login', loginHandler);
+app.post('/api/auth/login', loginHandler);
+
+app.get('/processes', async (req, res) => {
+    const { userId } = req.query;
+
+    try {
+        if (!userId) {
+            return res.status(400).json({ error: 'userId is required.' });
+        }
+
+        const result = await pool.query(
+            `
+                SELECT
+                    process_id,
+                    user_id,
+                    title,
+                    description,
+                    status,
+                    created_at
+                FROM processes
+                WHERE user_id = $1
+                ORDER BY created_at DESC, process_id DESC
+            `,
+            [userId]
+        );
+
+        res.status(200).json(result.rows);
+    } catch (err) {
+        console.error('Database error:', err.message);
+        res.status(500).json({
+            error: 'Could not load processes.',
+            details: process.env.NODE_ENV === 'production' ? undefined : err.message
+        });
+    }
+});
+
+app.post('/processes', async (req, res) => {
+    const { userId, title, description, status } = req.body;
+
+    try {
+        const normalizedTitle = title?.trim();
+        const normalizedStatus = VALID_PROCESS_STATUSES.has(status) ? status : 'pending';
+
+        if (!userId || !normalizedTitle) {
+            return res.status(400).json({ error: 'userId and title are required.' });
+        }
+
+        const userExists = await pool.query(
+            'SELECT user_id FROM users WHERE user_id = $1',
+            [userId]
+        );
+
+        if (userExists.rowCount === 0) {
+            return res.status(404).json({ error: 'User not found.' });
+        }
+
+        const result = await pool.query(
+            `
+                INSERT INTO processes (
+                    user_id,
+                    title,
+                    description,
+                    status
+                )
+                VALUES ($1, $2, $3, $4)
+                RETURNING process_id, user_id, title, description, status, created_at
+            `,
+            [userId, normalizedTitle, description?.trim() || null, normalizedStatus]
+        );
+
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('Database error:', err.message);
+        res.status(500).json({
+            error: 'Could not create process.',
+            details: process.env.NODE_ENV === 'production' ? undefined : err.message
+        });
+    }
+});
+
+app.get('/transactions', async (req, res) => {
+    const { userId } = req.query;
+
+    try {
+        if (!userId) {
+            return res.status(400).json({ error: 'userId is required.' });
+        }
+
+        const result = await pool.query(
+            `
+                SELECT
+                    transaction_id,
+                    user_id,
+                    party_name,
+                    category,
+                    entry_type,
+                    amount,
+                    payment_method,
+                    transaction_date,
+                    due_date,
+                    status,
+                    notes,
+                    created_at
+                FROM bookkeeping_transactions
+                WHERE user_id = $1
+                ORDER BY transaction_date DESC, transaction_id DESC
+            `,
+            [userId]
+        );
+
+        res.status(200).json(result.rows);
+    } catch (err) {
+        console.error('Database error:', err.message);
+        res.status(500).json({
+            error: 'Could not load transactions.',
+            details: process.env.NODE_ENV === 'production' ? undefined : err.message
+        });
+    }
+});
+
+app.post('/transactions', async (req, res) => {
+    const {
+        userId,
+        partyName,
+        category,
+        entryType,
+        amount,
+        paymentMethod,
+        transactionDate,
+        dueDate,
+        status,
+        notes
+    } = req.body;
+
+    try {
+        const normalizedPartyName = partyName?.trim();
+        const normalizedCategory = category?.trim();
+        const normalizedEntryType = VALID_TRANSACTION_TYPES.has(entryType) ? entryType : null;
+        const normalizedStatus = VALID_TRANSACTION_STATUSES.has(status) ? status : 'Pending';
+        const parsedAmount = Number(amount);
+
+        if (!userId || !normalizedPartyName || !normalizedCategory || !normalizedEntryType || Number.isNaN(parsedAmount) || parsedAmount < 0) {
+            return res.status(400).json({
+                error: 'userId, partyName, category, entryType, and a valid amount are required.'
+            });
+        }
+
+        const userExists = await pool.query(
+            'SELECT user_id FROM users WHERE user_id = $1',
+            [userId]
+        );
+
+        if (userExists.rowCount === 0) {
+            return res.status(404).json({ error: 'User not found.' });
+        }
+
+        const result = await pool.query(
+            `
+                INSERT INTO bookkeeping_transactions (
+                    user_id,
+                    party_name,
+                    category,
+                    entry_type,
+                    amount,
+                    payment_method,
+                    transaction_date,
+                    due_date,
+                    status,
+                    notes
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, CURRENT_DATE), $8, $9, $10)
+                RETURNING
+                    transaction_id,
+                    user_id,
+                    party_name,
+                    category,
+                    entry_type,
+                    amount,
+                    payment_method,
+                    transaction_date,
+                    due_date,
+                    status,
+                    notes,
+                    created_at
+            `,
+            [
+                userId,
+                normalizedPartyName,
+                normalizedCategory,
+                normalizedEntryType,
+                parsedAmount,
+                paymentMethod?.trim() || null,
+                transactionDate || null,
+                dueDate || null,
+                normalizedStatus,
+                notes?.trim() || null
+            ]
+        );
+
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('Database error:', err.message);
+        res.status(500).json({
+            error: 'Could not create transaction.',
+            details: process.env.NODE_ENV === 'production' ? undefined : err.message
+        });
+    }
+});
+
+const startServer = async () => {
+    try {
+        await ensureDatabaseSchema();
+        app.listen(PORT, () => {
+            console.log(`Server running on http://localhost:${PORT}`);
+        });
+    } catch (err) {
+        console.error('Failed to initialize database schema:', err.message);
+        process.exit(1);
+    }
+};
+
+startServer();

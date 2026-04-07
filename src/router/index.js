@@ -1,13 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import homepage from '@/pages/homepage.vue'
-import Signup from '@/pages/signup.vue'
-import login from '@/pages/login.vue'
-import Navbar from '@/components/navbar.vue'
-import Hero2 from '@/components/hero2.vue'
-import Sponsorhero from '@/components/sponsorhero.vue'
-import Reviewhero from '@/components/reviewhero.vue'
-import Trialbox from '@/components/trialbox.vue'
-import Menuhero from '@/components/menuhero.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -15,48 +6,37 @@ const router = createRouter({
     {
       path: '/',
       name: 'homepage',
-      component: homepage,
-
+      component: () => import('@/pages/general/homepage.vue'),
     },
     {
-      path:'/signup',
-      name:'signup',
-      component: Signup,
+      path: '/signup',
+      name: 'signup',
+      component: () => import('@/pages/general/signup.vue'),
     },
     {
-      path:'/login',
-      name:'login',
-      component:login,
+      path: '/login',
+      name: 'login',
+      component: () => import('@/pages/general/login.vue'),
     },
     {
-      path:'/navbar',
-      name:'navbar',
-      component:Navbar,
+      path: '/dashboard',
+      name: 'dashboard',
+      component: () => import('@/pages/general/user/dashboard.vue'),
     },
     {
-      path:'/hero2',
-      name:'hero2',
-      component:Hero2,
+      path: '/transactions',
+      name: 'transactions',
+      component: () => import('@/pages/general/user/transactions.vue'),
     },
     {
-      path:'/sponsorhero',
-      name:'sponsorhero',
-      component: Sponsorhero,
+      path: '/reports',
+      name: 'reports',
+      component: () => import('@/pages/general/user/reports.vue'),
     },
     {
-      path: '/reviewhero',
-      name:'reviewhero',
-      component: Reviewhero,
-    },
-    {
-      path: '/trialbox',
-      name: 'trialbox',
-      component: Trialbox,
-    },
-    {
-      path: '/menuhero',
-      name: 'menuhero',
-      component: Menuhero,
+      path: '/adminpage',
+      name: 'adminpage',
+      component: () => import ('@/pages/general/admin/adminpage.vue')
     }
   ],
 })

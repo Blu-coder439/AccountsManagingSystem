@@ -1,6 +1,6 @@
 <template>
     <section class="relative overflow-hidden bg-slate-950 px-6 py-24 text-white">
-        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.35),_transparent_45%)]"></div>
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.35),transparent_45%)]"></div>
         <div class="absolute inset-x-0 bottom-0 h-40 bg-linear-to-t from-blue-500/10 to-transparent"></div>
 
         <div class="relative mx-auto grid max-w-6xl gap-12 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
@@ -28,7 +28,7 @@
                 </div>
             </div>
 
-            <div class="rounded-[2rem] border border-white/10 bg-white/5 p-8 backdrop-blur-sm">
+            <div class="rounded-4xl border border-white/10 bg-white/5 p-8 backdrop-blur-sm">
                 <div class="mb-6 flex items-center justify-between">
                     <span class="text-sm font-semibold text-slate-200">What you get</span>
                     <span class="rounded-full bg-blue-500/20 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-blue-200">
