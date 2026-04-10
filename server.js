@@ -1,12 +1,18 @@
 import express from 'express';
+import fs from 'fs';
 import pkg from 'pg';
 import cors from 'cors';
 import crypto from 'crypto';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const { Pool } = pkg;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const projectRoot = __dirname;
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT || 3000);
 const VALID_PROCESS_STATUSES = new Set(['pending', 'in_progress', 'completed']);
 const VALID_TRANSACTION_TYPES = new Set(['Revenue', 'Expense', 'Receivable', 'Payable']);
 const VALID_TRANSACTION_STATUSES = new Set([
@@ -21,16 +27,73 @@ const VALID_TRANSACTION_STATUSES = new Set([
     'Upcoming'
 ]);
 
+const loadEnvFile = (filename) => {
+    const filePath = path.join(projectRoot, filename);
+
+    if (!fs.existsSync(filePath)) {
+        return;
+    }
+
+    const fileContents = fs.readFileSync(filePath, 'utf8');
+
+    fileContents.split(/\r?\n/).forEach((line) => {
+        const trimmedLine = line.trim();
+
+        if (!trimmedLine || trimmedLine.startsWith('#')) {
+            return;
+        }
+
+        const equalsIndex = trimmedLine.indexOf('=');
+
+        if (equalsIndex === -1) {
+            return;
+        }
+
+        const key = trimmedLine.slice(0, equalsIndex).trim();
+        const rawValue = trimmedLine.slice(equalsIndex + 1).trim();
+        const normalizedValue = rawValue.replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1');
+
+        if (!(key in process.env)) {
+            process.env[key] = normalizedValue;
+        }
+    });
+};
+
+loadEnvFile('.env');
+loadEnvFile(process.env.NODE_ENV === 'production' ? '.env.production' : '.env.local');
+
 app.use(cors());
 app.use(express.json());
 
-const pool = new Pool({
-    host: 'localhost',
-    port: 5432,
-    user: 'postgres',
-    password: 'postgres',
-    database: 'demographic'
-});
+const createPool = () => {
+    const connectionString = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
+    const shouldUseSsl =
+        process.env.PGSSLMODE === 'require' ||
+        process.env.NODE_ENV === 'production' ||
+        Boolean(connectionString?.includes('supabase'));
+
+    if (connectionString) {
+        return new Pool({
+            connectionString,
+            ssl: shouldUseSsl
+                ? { rejectUnauthorized: process.env.PG_SSL_REJECT_UNAUTHORIZED !== 'false' }
+                : false
+        });
+    }
+
+    return new Pool({
+        host: process.env.PGHOST || 'localhost',
+        port: Number(process.env.PGPORT || 5432),
+        user: process.env.PGUSER || 'postgres',
+        password: process.env.PGPASSWORD || 'postgres',
+        database: process.env.PGDATABASE || 'demographic',
+        ssl: shouldUseSsl
+            ? { rejectUnauthorized: process.env.PG_SSL_REJECT_UNAUTHORIZED !== 'false' }
+            : false
+    });
+};
+
+const pool = createPool();
 
 const ensureDatabaseSchema = async () => {
     await pool.query(`
