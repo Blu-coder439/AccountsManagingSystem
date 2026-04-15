@@ -78,10 +78,10 @@
 
     <div class="mt-auto border-t border-slate-200 pt-4">
       <button
-        @click="$emit('menuSelect', 'Settings'); selectedMenu = 'Settings'"
+        @click="goToSettings"
         :class="[
           'flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition duration-300',
-          selectedMenu === 'Settings'
+          selectedMenu === 'settings'
             ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
             : 'text-slate-600 hover:bg-blue-50 hover:text-blue-700'
         ]"
@@ -89,7 +89,7 @@
         <span
           :class="[
             'material-symbols-outlined min-w-10 rounded-xl px-2 py-2 text-center text-[22px]',
-            selectedMenu === 'Settings'
+            selectedMenu === 'settings'
               ? 'bg-white/15 text-white'
               : 'bg-slate-100 text-slate-500'
           ]"
@@ -129,7 +129,7 @@ export default {
       immediate: true,
       handler(name) {
         const matchedItem = this.menuItems.find((item) => item.key === name);
-        this.selectedMenu = matchedItem ? matchedItem.key : null;
+        this.selectedMenu = matchedItem ? matchedItem.key : name === 'settings' ? 'settings' : null;
       },
     },
   },
@@ -150,10 +150,18 @@ export default {
         dashboard: '/dashboard',
         transactions: '/transactions',
         reports: '/reports',
-        settings: '/settings',    };
+      };
 
       if (routeMap[item.key] && this.$route.path !== routeMap[item.key]) {
         this.$router.push(routeMap[item.key]);
+      }
+    },
+    goToSettings() {
+      this.selectedMenu = 'settings';
+      this.$emit('menuSelect', 'settings');
+
+      if (this.$route.path !== '/settings') {
+        this.$router.push('/settings');
       }
     },
     signOut() {
