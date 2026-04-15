@@ -11,7 +11,7 @@ const isSubmitting = ref(false);
 const errorMessage = ref('');
 const successMessage = ref('');
 const router = useRouter();
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE_URL = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/+$/,'');
 
 const form = ref({
   businessName: '',
@@ -73,7 +73,14 @@ const submitSignup = async () => {
       body: JSON.stringify(payload)
     });
 
-    const data = await response.json();
+    const contentType = response.headers.get('content-type') || '';
+    let data;
+    if (contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      throw new Error(`Expected JSON response but received: ${text.slice(0, 200)}`);
+    }
 
     if (!response.ok) {
       throw new Error(data.error || 'Signup failed.');

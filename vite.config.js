@@ -14,6 +14,34 @@ export default defineConfig({
     vueDevTools(),
     tailwindcss(),
   ],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+      '/health': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+      '/login': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+      '/signup': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+      '/processes': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+      '/transactions': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))

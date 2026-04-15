@@ -398,6 +398,22 @@ app.post('/processes', async (req, res) => {
     }
 });
 
+// Health check
+app.get('/health', (_req, res) => {
+    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Catch-all for unknown routes -> return JSON 404 (prevents HTML responses)
+app.use((req, res) => {
+    res.status(404).json({ error: 'Not found', path: req.originalUrl });
+});
+
+// Error handler middleware to ensure JSON responses on server errors
+app.use((err, req, res, _next) => {
+    console.error('Unhandled error:', err && err.stack ? err.stack : err);
+    res.status(500).json({ error: 'Internal server error' });
+});
+
 app.get('/transactions', async (req, res) => {
     const { userId } = req.query;
 

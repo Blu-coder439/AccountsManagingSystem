@@ -1,1 +1,0 @@
-import{S as r}from"./sidebar-BwOifaD8.js";import{E as a,o as e}from"./index-BhlQTud3.js";import"./_plugin-vue_export-helper-DlAUqK2U.js";const _={__name:"adminpage",setup(o){return(t,p)=>(e(),a(r))}};export{_ as default};

@@ -16,7 +16,7 @@ const isSubmitting = ref(false);
 const errorMessage = ref('');
 const successMessage = ref('');
 const router = useRouter();
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE_URL = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/+$/,'');
 
 // --- METHODS ---
 const handleLogin = async () => {
@@ -25,7 +25,7 @@ const handleLogin = async () => {
     isSubmitting.value = true;
 
     try {
-        const response = await fetch(`${API_BASE_URL}/login`, {
+        const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -36,10 +36,17 @@ const handleLogin = async () => {
             })
         });
 
-        const data = await response.json();
+        const contentType = response.headers.get('content-type') || '';
+        let data;
+        if (contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          const text = await response.text();
+          throw new Error(`Expected JSON response but received: ${text.slice(0,200)}`);
+        }
 
         if (!response.ok) {
-            throw new Error(data.error || 'Login failed.');
+          throw new Error(data && data.error ? data.error : 'Login failed.');
         }
 
         const displayName = data.user.full_name || data.user.business_name || data.user.email;

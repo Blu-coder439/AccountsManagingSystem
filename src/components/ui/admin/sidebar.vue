@@ -150,7 +150,7 @@ export default {
         dashboard: '/dashboard',
         transactions: '/transactions',
         reports: '/reports',
-      };
+        settings: '/settings',    };
 
       if (routeMap[item.key] && this.$route.path !== routeMap[item.key]) {
         this.$router.push(routeMap[item.key]);

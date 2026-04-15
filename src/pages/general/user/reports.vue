@@ -3,7 +3,7 @@ import Sidebar from '@/components/ui/admin/sidebar.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE_URL = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/+$/,'');
 const router = useRouter();
 
 const isSidebarExpanded = ref(false);
@@ -399,12 +399,12 @@ onMounted(async () => {
         </article>
       </section>
 
-      <section v-if="isLoading" class="report-shell mb-6 rounded-[2rem] border border-slate-200 bg-white p-8 text-sm font-medium text-slate-500 shadow-xl shadow-slate-200">
+      <section v-if="isLoading" class="report-shell mb-6 rounded-4xl border border-slate-200 bg-white p-8 text-sm font-medium text-slate-500 shadow-xl shadow-slate-200">
         Loading report data...
       </section>
 
       <template v-else>
-        <section class="report-shell mb-6 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200">
+        <section class="report-shell mb-6 rounded-4xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200">
           <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 class="text-lg font-black text-slate-900">Report Window</h2>
@@ -415,7 +415,7 @@ onMounted(async () => {
         </section>
 
         <section class="report-shell mb-6 grid gap-6 xl:grid-cols-[1.4fr,0.9fr]">
-          <article class="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-xl shadow-slate-200">
+          <article class="rounded-4xl border border-slate-200 bg-white p-7 shadow-xl shadow-slate-200">
             <div class="flex items-center justify-between gap-4">
               <div>
                 <h2 class="text-xl font-black text-slate-900">By Transaction Type</h2>
@@ -489,7 +489,7 @@ onMounted(async () => {
             </div>
           </article>
 
-          <article class="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-xl shadow-slate-200">
+          <article class="rounded-4xl border border-slate-200 bg-white p-7 shadow-xl shadow-slate-200">
             <h2 class="text-xl font-black text-slate-900">Recent Movements</h2>
             <p class="mt-1 text-sm text-slate-500">Latest transactions included in the report.</p>
 
@@ -517,7 +517,7 @@ onMounted(async () => {
         </section>
 
         <section class="report-shell mb-6 grid gap-6 lg:grid-cols-2">
-          <article class="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-xl shadow-slate-200">
+          <article class="rounded-4xl border border-slate-200 bg-white p-7 shadow-xl shadow-slate-200">
             <div class="flex items-center justify-between gap-4">
               <div>
                 <h2 class="text-xl font-black text-slate-900">Receivables To Chase</h2>
@@ -548,7 +548,7 @@ onMounted(async () => {
             </div>
           </article>
 
-          <article class="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-xl shadow-slate-200">
+          <article class="rounded-4xl border border-slate-200 bg-white p-7 shadow-xl shadow-slate-200">
             <div class="flex items-center justify-between gap-4">
               <div>
                 <h2 class="text-xl font-black text-slate-900">Payables To Settle</h2>
@@ -580,7 +580,7 @@ onMounted(async () => {
           </article>
         </section>
 
-        <section class="report-shell mb-6 rounded-[2rem] border border-slate-200 bg-white p-7 shadow-xl shadow-slate-200">
+        <section class="report-shell mb-6 rounded-4xl border border-slate-200 bg-white p-7 shadow-xl shadow-slate-200">
           <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 class="text-xl font-black text-slate-900">Report Records</h2>
@@ -655,7 +655,7 @@ onMounted(async () => {
           </div>
         </section>
 
-        <section class="report-shell rounded-[2rem] border border-slate-200 bg-white p-7 shadow-xl shadow-slate-200">
+        <section class="report-shell rounded-4xl border border-slate-200 bg-white p-7 shadow-xl shadow-slate-200">
           <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 class="text-xl font-black text-slate-900">Report Ledger</h2>
