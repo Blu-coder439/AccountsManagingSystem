@@ -95,6 +95,21 @@ const createPool = () => {
 
 const pool = createPool();
 
+console.log('DB env summary:', {
+    DATABASE_URL: Boolean(process.env.DATABASE_URL),
+    SUPABASE_DB_URL: Boolean(process.env.SUPABASE_DB_URL),
+    PGHOST: process.env.PGHOST || null,
+    SUPABASE_URL: process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || null
+});
+if (process.env.DATABASE_URL) {
+    try {
+        const parsed = new URL(process.env.DATABASE_URL);
+        console.log('Detected DATABASE_URL host:', parsed.hostname);
+    } catch (e) {
+        // ignore parse errors
+    }
+}
+
 const ensureDatabaseSchema = async () => {
     await pool.query(`
         CREATE TABLE IF NOT EXISTS users (
@@ -519,7 +534,8 @@ const startServer = async () => {
             console.log(`Server running on http://localhost:${PORT}`);
         });
     } catch (err) {
-        console.error('Failed to initialize database schema:', err.message);
+        console.error('Failed to initialize database schema:');
+        console.error(err && err.stack ? err.stack : err);
         process.exit(1);
     }
 };
