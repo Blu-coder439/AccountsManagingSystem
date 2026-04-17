@@ -1,5 +1,5 @@
 import { computed, onMounted, onUnmounted, ref, unref, watch } from 'vue';
-import { getUserSettings } from '@/utils/user-settings';
+import { getCurrentUser, getUserSettings } from '@/utils/user-settings';
 
 const DEFAULT_CURRENCY = 'USD';
 const BASE_CURRENCY = 'USD';
@@ -15,6 +15,7 @@ const EXCHANGE_RATE_ENDPOINT = (base = BASE_CURRENCY) => {
 };
 
 const displayCurrency = ref(DEFAULT_CURRENCY);
+const liveExchangeRatesEnabled = ref(false);
 const exchangeRates = ref({ USD: 1 });
 const exchangeRatesUpdatedAt = ref('');
 const exchangeRatesError = ref('');
@@ -122,6 +123,10 @@ const loadExchangeRates = async ({ force = false } = {}) => {
 };
 
 const resolveUserId = (userSource) => {
+  if (userSource === undefined) {
+    return getCurrentUser()?.user_id ?? null;
+  }
+
   const value = unref(userSource);
 
   if (typeof value === 'number' || typeof value === 'string') {
@@ -134,7 +139,10 @@ const resolveUserId = (userSource) => {
 export const useDisplayCurrency = (userSource) => {
   const refreshCurrencyPreference = () => {
     const userId = resolveUserId(userSource);
-    const savedCurrency = getUserSettings(userId).currency;
+    const savedSettings = getUserSettings(userId);
+    const savedCurrency = savedSettings.currency;
+
+    liveExchangeRatesEnabled.value = Boolean(savedSettings.useLiveExchangeRates);
 
     displayCurrency.value = SUPPORTED_CURRENCIES.includes(savedCurrency)
       ? savedCurrency
@@ -143,13 +151,17 @@ export const useDisplayCurrency = (userSource) => {
 
   const convertAmount = (amount) => {
     const numericAmount = Number(amount || 0);
-    const selectedCurrency = displayCurrency.value;
+    const selectedCurrency = liveExchangeRatesEnabled.value ? displayCurrency.value : BASE_CURRENCY;
 
     if (!Number.isFinite(numericAmount)) {
       return 0;
     }
 
     if (selectedCurrency === BASE_CURRENCY) {
+      return numericAmount;
+    }
+
+    if (!liveExchangeRatesEnabled.value) {
       return numericAmount;
     }
 
@@ -168,12 +180,16 @@ export const useDisplayCurrency = (userSource) => {
   const formatCurrency = (amount, options = {}) =>
     new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: displayCurrency.value,
+      currency: liveExchangeRatesEnabled.value ? displayCurrency.value : BASE_CURRENCY,
       maximumFractionDigits: 2,
       ...options,
     }).format(convertAmount(amount));
 
   const exchangeRateStatus = computed(() => {
+    if (!liveExchangeRatesEnabled.value) {
+      return 'Live exchange rates are turned off.';
+    }
+
     if (exchangeRatesError.value && !exchangeRatesUpdatedAt.value) {
       return 'Live rates unavailable. Values are shown using the base USD amounts.';
     }
@@ -188,11 +204,13 @@ export const useDisplayCurrency = (userSource) => {
   onMounted(() => {
     refreshCurrencyPreference();
 
-    // If the user prefers a non-base currency, eagerly fetch live rates immediately.
-    if (displayCurrency.value && displayCurrency.value !== BASE_CURRENCY) {
-      loadExchangeRates({ force: true });
-    } else {
-      loadExchangeRates();
+    if (liveExchangeRatesEnabled.value) {
+      // If the user prefers a non-base currency, eagerly fetch live rates immediately.
+      if (displayCurrency.value && displayCurrency.value !== BASE_CURRENCY) {
+        loadExchangeRates({ force: true });
+      } else {
+        loadExchangeRates();
+      }
     }
 
     window.addEventListener('finflow-settings-updated', refreshCurrencyPreference);
@@ -212,6 +230,7 @@ export const useDisplayCurrency = (userSource) => {
 
   return {
     displayCurrency,
+    liveExchangeRatesEnabled,
     exchangeRateStatus,
     exchangeRatesUpdatedAt,
     exchangeRatesError,

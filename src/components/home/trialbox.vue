@@ -13,6 +13,10 @@
                     Explore automated invoicing, clean reporting, and smarter expense tracking with no
                     setup stress and no commitment upfront.
                 </p>
+                <p class="mt-4 text-sm font-semibold text-slate-200">
+                    After trial: <span class="text-white">{{ formatCurrency(29) }}</span> / month
+                    <span class="text-slate-400">(converted when live exchange rates are enabled in Settings)</span>
+                </p>
 
                 <div class="mt-8 flex flex-col gap-4 sm:flex-row">
                     <button
@@ -56,7 +60,13 @@
 </template>
 
 <script>
+import { useDisplayCurrency } from '@/composables/use-display-currency'
+
 export default {
-    name: 'TrialBox'
+    name: 'TrialBox',
+    setup() {
+        const { formatCurrency } = useDisplayCurrency()
+        return { formatCurrency }
+    }
 }
 </script>

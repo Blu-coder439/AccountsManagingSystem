@@ -18,6 +18,7 @@ const defaultSettings = {
   fiscalYearStart: 'January',
   defaultReportView: 'Monthly',
   darkMode: false,
+  useLiveExchangeRates: false,
   emailNotifications: true,
   overdueAlerts: true,
   weeklySummary: false
@@ -204,7 +205,7 @@ onUnmounted(() => {
                   <option>GBP</option>
                 </select>
                 <p class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                  Display currency applies across the workspace using the latest available exchange rates. {{ exchangeRateStatus }}
+                  Display currency applies across the workspace. Enable live rates below to convert values. {{ exchangeRateStatus }}
                 </p>
               </div>
 
@@ -231,6 +232,16 @@ onUnmounted(() => {
 
             <div class="space-y-4">
               <label class="block text-sm font-semibold text-slate-800 dark:text-slate-200">Notifications And Display</label>
+
+              <label class="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-700 dark:bg-slate-900">
+                <div>
+                  <p class="font-bold text-slate-900 dark:text-slate-50">Live Exchange Rates</p>
+                  <p class="mt-1 text-sm text-slate-500 dark:text-slate-300">
+                    When enabled, currency values are converted using the latest exchange rates.
+                  </p>
+                </div>
+                <input v-model="settingsForm.useLiveExchangeRates" type="checkbox" class="h-5 w-5 rounded border-slate-300 text-amber-500 focus:ring-amber-400">
+              </label>
 
               <label class="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-700 dark:bg-slate-900">
                 <div>
