@@ -546,14 +546,16 @@ app.post('/transactions', async (req, res) => {
 const startServer = async () => {
     try {
         await ensureDatabaseSchema();
-        app.listen(PORT, () => {
-            console.log(`Server running on http://localhost:${PORT}`);
-        });
+        console.log('Database schema ensured.');
     } catch (err) {
-        console.error('Failed to initialize database schema:');
+        console.error('Warning: failed to initialize database schema. Running in degraded mode.');
         console.error(err && err.stack ? err.stack : err);
-        process.exit(1);
+        console.error('If this is unexpected, check your DATABASE_URL / SUPABASE_DB_URL and network connectivity.');
     }
+
+    app.listen(PORT, () => {
+        console.log(`Server running on http://localhost:${PORT}`);
+    });
 };
 
 startServer();

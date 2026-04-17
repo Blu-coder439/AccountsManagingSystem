@@ -2,8 +2,9 @@
 import Sidebar from '@/components/ui/admin/sidebar.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { apiUrl } from '@/utils/api-base';
+import { useDisplayCurrency } from '@/composables/use-display-currency';
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/+$/,'');
 const router = useRouter();
 
 const isSidebarExpanded = ref(false);
@@ -13,6 +14,7 @@ const isLoading = ref(true);
 const reportRecords = ref([]);
 const selectedReportRecordId = ref(null);
 const errorMessage = ref('');
+const { formatCurrency } = useDisplayCurrency(currentUser);
 
 const typeStyles = {
   Revenue: 'bg-emerald-50 text-emerald-700',
@@ -32,13 +34,6 @@ const statusStyles = {
   Urgent: 'bg-rose-50 text-rose-700',
   Upcoming: 'bg-blue-50 text-blue-700'
 };
-
-const formatCurrency = (value) =>
-  new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 2
-  }).format(Number(value || 0));
 
 const formatDate = (value) => {
   if (!value) {
@@ -297,7 +292,7 @@ const loadTransactions = async () => {
   errorMessage.value = '';
 
   try {
-    const response = await fetch(`${API_BASE_URL}/transactions?userId=${currentUser.value.user_id}`);
+    const response = await fetch(apiUrl(`/transactions?userId=${currentUser.value.user_id}`));
     const data = await response.json();
 
     if (!response.ok) {
@@ -339,12 +334,12 @@ onMounted(async () => {
   <Sidebar @toggle="handleSidebarToggle" />
   <div
     :class="[
-      'min-h-screen bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.12),_transparent_30%),linear-gradient(to_bottom,_#f9fcff,_#f8fafc)] p-4 transition-[margin] duration-300 lg:p-8',
+      'min-h-screen bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.12), transparent_30%),linear-gradient(to_bottom,_#f9fcff,_#f8fafc)] p-4 transition-[margin] duration-300 lg:p-8',
       isSidebarExpanded ? 'ml-72' : 'ml-24'
     ]"
   >
     <div class="mx-auto max-w-7xl">
-      <section class="report-shell mb-8 rounded-[2rem] border border-slate-200 bg-white/90 p-8 shadow-xl shadow-slate-200 backdrop-blur-sm">
+      <section class="report-shell mb-8 rounded-4xl border border-slate-200 bg-white/90 p-8 shadow-xl shadow-slate-200 backdrop-blur-sm">
         <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p class="text-sm font-semibold uppercase tracking-[0.25em] text-sky-600">Reports</p>
@@ -442,7 +437,7 @@ onMounted(async () => {
             </div>
           </article>
 
-          <article class="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-xl shadow-slate-200">
+          <article class="rounded- border border-slate-200 bg-white p-7 shadow-xl shadow-slate-200">
             <h2 class="text-xl font-black text-slate-900">Report Insights</h2>
             <p class="mt-1 text-sm text-slate-500">Small signals that help you act faster.</p>
 
@@ -463,7 +458,7 @@ onMounted(async () => {
         </section>
 
         <section class="report-shell mb-6 grid gap-6 lg:grid-cols-[1fr,0.95fr]">
-          <article class="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-xl shadow-slate-200">
+          <article class="rounded-4xl border border-slate-200 bg-white p-7 shadow-xl shadow-slate-200">
             <div class="flex items-center justify-between gap-4">
               <div>
                 <h2 class="text-xl font-black text-slate-900">Category Breakdown</h2>

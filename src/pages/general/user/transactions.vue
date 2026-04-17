@@ -2,8 +2,9 @@
 import Sidebar from '@/components/ui/admin/sidebar.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { apiUrl } from '@/utils/api-base';
+import { useDisplayCurrency } from '@/composables/use-display-currency';
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/+$/,'');
 const router = useRouter();
 
 const isSidebarExpanded = ref(false);
@@ -15,6 +16,7 @@ const isFormModalOpen = ref(false);
 const selectedComparisonYear = ref(new Date().getFullYear());
 const errorMessage = ref('');
 const successMessage = ref('');
+const { formatCurrency } = useDisplayCurrency(currentUser);
 
 const typeStyles = {
   Revenue: 'bg-emerald-50 text-emerald-700',
@@ -70,13 +72,6 @@ const openFormModal = () => {
 const closeFormModal = () => {
   isFormModalOpen.value = false;
 };
-
-const formatCurrency = (value) =>
-  new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 2
-  }).format(Number(value || 0));
 
 const formatDate = (value) => {
   if (!value) {
@@ -299,7 +294,7 @@ const loadTransactions = async () => {
   errorMessage.value = '';
 
   try {
-    const response = await fetch(`${API_BASE_URL}/transactions?userId=${currentUser.value.user_id}`);
+    const response = await fetch(apiUrl(`/transactions?userId=${currentUser.value.user_id}`));
     const data = await response.json();
 
     if (!response.ok) {
@@ -334,7 +329,7 @@ const createTransaction = async () => {
   isSubmitting.value = true;
 
   try {
-    const response = await fetch(`${API_BASE_URL}/transactions`, {
+    const response = await fetch(apiUrl('/transactions'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

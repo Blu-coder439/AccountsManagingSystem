@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { apiUrl } from '@/utils/api-base';
 
 const inputStyles = "w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-600 transition-all placeholder:text-slate-300";
 const labelStyles = "block text-sm font-semibold text-slate-800 mb-1.5";
@@ -11,7 +12,6 @@ const isSubmitting = ref(false);
 const errorMessage = ref('');
 const successMessage = ref('');
 const router = useRouter();
-const API_BASE_URL = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/+$/,'');
 
 const form = ref({
   businessName: '',
@@ -65,7 +65,7 @@ const submitSignup = async () => {
       // Do not add phone for business accounts
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/auth/signup`, {
+    const response = await fetch(apiUrl('/api/auth/signup'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -92,7 +92,9 @@ const submitSignup = async () => {
       router.push('/login');
     }, 1000);
   } catch (error) {
-    errorMessage.value = error.message;
+    errorMessage.value = error instanceof TypeError
+      ? 'Could not reach the signup service. Make sure the backend is running locally or the deployment is configured correctly.'
+      : error.message;
   } finally {
     isSubmitting.value = false;
   }

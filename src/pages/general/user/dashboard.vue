@@ -2,8 +2,9 @@
 import Sidebar from '@/components/ui/admin/sidebar.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { apiUrl } from '@/utils/api-base';
+import { useDisplayCurrency } from '@/composables/use-display-currency';
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/+$/,'');
 const router = useRouter();
 
 const currentUser = ref(null);
@@ -17,13 +18,38 @@ const form = ref({
   description: '',
   status: 'pending'
 });
+const { formatCurrency } = useDisplayCurrency(currentUser);
 
-const metricCards = [
-  { label: 'Monthly Revenue', value: '$48,200', change: '+12.4%', icon: 'trending_up', tone: 'border-emerald-100 bg-emerald-50 text-emerald-600' },
-  { label: 'Operating Expenses', value: '$18,640', change: '-3.1%', icon: 'payments', tone: 'border-rose-100 bg-rose-50 text-rose-600' },
-  { label: 'Net Profit', value: '$29,560', change: '+8.7%', icon: 'account_balance_wallet', tone: 'border-blue-100 bg-blue-50 text-blue-600' },
-  { label: 'Outstanding Invoices', value: '14', change: '$9,320 due', icon: 'receipt_long', tone: 'border-amber-100 bg-amber-50 text-amber-600' }
-];
+const metricCards = computed(() => [
+  {
+    label: 'Monthly Revenue',
+    value: formatCurrency(48200),
+    change: '+12.4%',
+    icon: 'trending_up',
+    tone: 'border-emerald-100 bg-emerald-50 text-emerald-600'
+  },
+  {
+    label: 'Operating Expenses',
+    value: formatCurrency(18640),
+    change: '-3.1%',
+    icon: 'payments',
+    tone: 'border-rose-100 bg-rose-50 text-rose-600'
+  },
+  {
+    label: 'Net Profit',
+    value: formatCurrency(29560),
+    change: '+8.7%',
+    icon: 'account_balance_wallet',
+    tone: 'border-blue-100 bg-blue-50 text-blue-600'
+  },
+  {
+    label: 'Outstanding Invoices',
+    value: '14',
+    change: `${formatCurrency(9320)} due`,
+    icon: 'receipt_long',
+    tone: 'border-amber-100 bg-amber-50 text-amber-600'
+  }
+]);
 
 const revenueTrend = [
   { month: 'Jan', revenue: 58, expense: 35 },
@@ -41,11 +67,11 @@ const expenseBreakdown = [
   { label: 'Tools', value: 14, color: 'bg-amber-400' }
 ];
 
-const cashflowItems = [
-  { label: 'Cash in bank', value: '$124,800', helper: 'Healthy runway for 4.2 months' },
-  { label: 'Receivables', value: '$21,430', helper: '8 invoices due this week' },
-  { label: 'Payables', value: '$7,860', helper: '3 supplier payments scheduled' }
-];
+const cashflowItems = computed(() => [
+  { label: 'Cash in bank', value: formatCurrency(124800), helper: 'Healthy runway for 4.2 months' },
+  { label: 'Receivables', value: formatCurrency(21430), helper: '8 invoices due this week' },
+  { label: 'Payables', value: formatCurrency(7860), helper: '3 supplier payments scheduled' }
+]);
 
 const recentActivity = [
   { title: 'VAT return ready for review', time: 'Today, 09:20', tone: 'bg-blue-50 text-blue-700' },
@@ -77,7 +103,7 @@ const loadProcesses = async () => {
   errorMessage.value = '';
 
   try {
-    const response = await fetch(`${API_BASE_URL}/processes?userId=${currentUser.value.user_id}`);
+    const response = await fetch(apiUrl(`/processes?userId=${currentUser.value.user_id}`));
     const data = await response.json();
 
     if (!response.ok) {
@@ -97,7 +123,7 @@ const createProcess = async () => {
   isSubmitting.value = true;
 
   try {
-    const response = await fetch(`${API_BASE_URL}/processes`, {
+    const response = await fetch(apiUrl('/processes'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

@@ -2,6 +2,7 @@
 import Sidebar from '@/components/ui/admin/sidebar.vue';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { useDisplayCurrency } from '@/composables/use-display-currency';
 import { signOutCurrentUser } from '@/utils/auth-session';
 import { getCurrentUser, getUserSettings, saveUserSettings } from '@/utils/user-settings';
 
@@ -23,6 +24,7 @@ const defaultSettings = {
 };
 
 const settingsForm = ref({ ...defaultSettings });
+const { exchangeRateStatus, refreshExchangeRates } = useDisplayCurrency(currentUser);
 
 const displayName = computed(() =>
   currentUser.value?.full_name || currentUser.value?.business_name || currentUser.value?.email || 'Settings'
@@ -122,6 +124,7 @@ onMounted(() => {
 
   currentUser.value = user;
   loadSettings();
+  refreshExchangeRates();
 });
 
 onUnmounted(() => {
@@ -200,6 +203,9 @@ onUnmounted(() => {
                   <option>EUR</option>
                   <option>GBP</option>
                 </select>
+                <p class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                  Display currency applies across the workspace using the latest available exchange rates. {{ exchangeRateStatus }}
+                </p>
               </div>
 
               <div>
