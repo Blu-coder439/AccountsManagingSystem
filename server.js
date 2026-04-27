@@ -5,6 +5,8 @@ import cors from 'cors';
 import crypto from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { getOrSyncAppUserFromRequest } from './lib/server/app-user.js';
+import { UnauthorizedError } from './lib/server/supabase.js';
 
 const { Pool } = pkg;
 const __filename = fileURLToPath(import.meta.url);
@@ -65,6 +67,13 @@ loadEnvFile(process.env.NODE_ENV === 'production' ? '.env.production' : '.env.lo
 app.use(cors());
 app.use(express.json());
 
+const toWebRequest = (req) =>
+    new Request(`http://localhost${req.originalUrl}`, {
+        method: req.method,
+        headers: req.headers,
+        body: ['GET', 'HEAD'].includes(req.method) ? undefined : JSON.stringify(req.body || {})
+    });
+
 const createPool = () => {
     const connectionString = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
     const shouldUseSsl =
@@ -114,6 +123,7 @@ const ensureDatabaseSchema = async () => {
     await pool.query(`
         CREATE TABLE IF NOT EXISTS users (
             user_id SERIAL PRIMARY KEY,
+            auth_user_id UUID,
             full_name TEXT,
             business_name TEXT,
             email TEXT NOT NULL UNIQUE,
@@ -125,6 +135,17 @@ const ensureDatabaseSchema = async () => {
             last_login TIMESTAMP,
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
+    `);
+
+    await pool.query(`
+        ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS auth_user_id UUID
+    `);
+
+    await pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS users_auth_user_id_idx
+        ON users (auth_user_id)
+        WHERE auth_user_id IS NOT NULL
     `);
 
     await pool.query(`
@@ -184,131 +205,45 @@ const verifyPassword = (password, storedHash) => {
 };
 
 const signupHandler = async (req, res) => {
-    const {
-        fullName,
-        businessName,
-        email,
-        password,
-        accountType,
-        businessType,
-        city,
-        phone
-    } = req.body;
-
     try {
-        const normalizedAccountType = accountType === 'business' ? 'business' : 'client';
-        const resolvedFullName = normalizedAccountType === 'client' ? fullName?.trim() : null;
-        const resolvedBusinessName = normalizedAccountType === 'business' ? businessName?.trim() : null;
+        const user = await getOrSyncAppUserFromRequest(toWebRequest(req), req.body, {
+            createIfMissing: true,
+            touchLastLogin: false
+        });
 
-        if ((!resolvedFullName && !resolvedBusinessName) || !email || !password) {
-            return res.status(400).json({ error: 'Name, email, and password are required.' });
-        }
-
-        const normalizedEmail = email.toLowerCase();
-        const existingUser = await pool.query(
-            'SELECT user_id FROM users WHERE email = $1',
-            [normalizedEmail]
-        );
-
-        if (existingUser.rowCount > 0) {
-            return res.status(409).json({ error: 'An account with this email already exists.' });
-        }
-
-        const result = await pool.query(
-            `
-                INSERT INTO users (
-                    full_name,
-                    business_name,
-                    email,
-                    password_hash,
-                    account_type,
-                    business_type,
-                    city,
-                    phone
-                )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-                RETURNING user_id, full_name, business_name, email, account_type, business_type, city, phone
-            `,
-            [
-                resolvedFullName,
-                resolvedBusinessName,
-                normalizedEmail,
-                hashPassword(password),
-                normalizedAccountType,
-                normalizedAccountType === 'business' ? businessType || null : null,
-                normalizedAccountType === 'client' ? city || null : null,
-                normalizedAccountType === 'client' ? phone || null : null
-            ]
-        );
-
-        res.status(201).json(result.rows[0]);
+        res.status(201).json(user);
     } catch (err) {
+        if (err instanceof UnauthorizedError) {
+            return res.status(err.status).json({ error: err.message });
+        }
+
         console.error('Database error:', err.message);
         res.status(500).json({
-            error: 'Signup failed. Check that your table columns match the server.',
+            error: 'Signup sync failed.',
             details: process.env.NODE_ENV === 'production' ? undefined : err.message
         });
     }
 };
 
 const loginHandler = async (req, res) => {
-    const { email, password } = req.body;
-
     try {
-        if (!email || !password) {
-            return res.status(400).json({ error: 'Email and password are required.' });
-        }
-
-        const result = await pool.query(
-            `
-                SELECT
-                    user_id,
-                    full_name,
-                    business_name,
-                    email,
-                    password_hash,
-                    account_type,
-                    business_type,
-                    city,
-                    phone
-                FROM users
-                WHERE email = $1
-            `,
-            [email.toLowerCase()]
-        );
-
-        if (result.rowCount === 0) {
-            return res.status(401).json({ error: 'Invalid email or password.' });
-        }
-
-        const user = result.rows[0];
-
-        if (!verifyPassword(password, user.password_hash)) {
-            return res.status(401).json({ error: 'Invalid email or password.' });
-        }
-
-        await pool.query(
-            'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE user_id = $1',
-            [user.user_id]
-        );
+        const user = await getOrSyncAppUserFromRequest(toWebRequest(req), req.body, {
+            createIfMissing: true,
+            touchLastLogin: true
+        });
 
         res.status(200).json({
             message: 'Login successful',
-            user: {
-                user_id: user.user_id,
-                email: user.email,
-                full_name: user.full_name,
-                business_name: user.business_name,
-                account_type: user.account_type,
-                business_type: user.business_type,
-                city: user.city,
-                phone: user.phone
-            }
+            user
         });
     } catch (err) {
+        if (err instanceof UnauthorizedError) {
+            return res.status(err.status).json({ error: err.message });
+        }
+
         console.error('Database error:', err.message);
         res.status(500).json({
-            error: 'Login failed',
+            error: 'Login sync failed',
             details: process.env.NODE_ENV === 'production' ? undefined : err.message
         });
     }
@@ -321,12 +256,8 @@ app.post('/login', loginHandler);
 app.post('/api/auth/login', loginHandler);
 
 app.get('/processes', async (req, res) => {
-    const { userId } = req.query;
-
     try {
-        if (!userId) {
-            return res.status(400).json({ error: 'userId is required.' });
-        }
+        const appUser = await getOrSyncAppUserFromRequest(toWebRequest(req));
 
         const result = await pool.query(
             `
@@ -341,11 +272,15 @@ app.get('/processes', async (req, res) => {
                 WHERE user_id = $1
                 ORDER BY created_at DESC, process_id DESC
             `,
-            [userId]
+            [appUser.user_id]
         );
 
         res.status(200).json(result.rows);
     } catch (err) {
+        if (err instanceof UnauthorizedError) {
+            return res.status(err.status).json({ error: err.message });
+        }
+
         console.error('Database error:', err.message);
         res.status(500).json({
             error: 'Could not load processes.',
@@ -355,23 +290,15 @@ app.get('/processes', async (req, res) => {
 });
 
 app.post('/processes', async (req, res) => {
-    const { userId, title, description, status } = req.body;
+    const { title, description, status } = req.body;
 
     try {
+        const appUser = await getOrSyncAppUserFromRequest(toWebRequest(req));
         const normalizedTitle = title?.trim();
         const normalizedStatus = VALID_PROCESS_STATUSES.has(status) ? status : 'pending';
 
-        if (!userId || !normalizedTitle) {
-            return res.status(400).json({ error: 'userId and title are required.' });
-        }
-
-        const userExists = await pool.query(
-            'SELECT user_id FROM users WHERE user_id = $1',
-            [userId]
-        );
-
-        if (userExists.rowCount === 0) {
-            return res.status(404).json({ error: 'User not found.' });
+        if (!normalizedTitle) {
+            return res.status(400).json({ error: 'Title is required.' });
         }
 
         const result = await pool.query(
@@ -385,11 +312,15 @@ app.post('/processes', async (req, res) => {
                 VALUES ($1, $2, $3, $4)
                 RETURNING process_id, user_id, title, description, status, created_at
             `,
-            [userId, normalizedTitle, description?.trim() || null, normalizedStatus]
+            [appUser.user_id, normalizedTitle, description?.trim() || null, normalizedStatus]
         );
 
         res.status(201).json(result.rows[0]);
     } catch (err) {
+        if (err instanceof UnauthorizedError) {
+            return res.status(err.status).json({ error: err.message });
+        }
+
         console.error('Database error:', err.message);
         res.status(500).json({
             error: 'Could not create process.',
@@ -399,28 +330,9 @@ app.post('/processes', async (req, res) => {
 });
 
 // Health check
-app.get('/health', (_req, res) => {
-    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// Catch-all for unknown routes -> return JSON 404 (prevents HTML responses)
-app.use((req, res) => {
-    res.status(404).json({ error: 'Not found', path: req.originalUrl });
-});
-
-// Error handler middleware to ensure JSON responses on server errors
-app.use((err, req, res, _next) => {
-    console.error('Unhandled error:', err && err.stack ? err.stack : err);
-    res.status(500).json({ error: 'Internal server error' });
-});
-
 app.get('/transactions', async (req, res) => {
-    const { userId } = req.query;
-
     try {
-        if (!userId) {
-            return res.status(400).json({ error: 'userId is required.' });
-        }
+        const appUser = await getOrSyncAppUserFromRequest(toWebRequest(req));
 
         const result = await pool.query(
             `
@@ -441,11 +353,15 @@ app.get('/transactions', async (req, res) => {
                 WHERE user_id = $1
                 ORDER BY transaction_date DESC, transaction_id DESC
             `,
-            [userId]
+            [appUser.user_id]
         );
 
         res.status(200).json(result.rows);
     } catch (err) {
+        if (err instanceof UnauthorizedError) {
+            return res.status(err.status).json({ error: err.message });
+        }
+
         console.error('Database error:', err.message);
         res.status(500).json({
             error: 'Could not load transactions.',
@@ -456,7 +372,6 @@ app.get('/transactions', async (req, res) => {
 
 app.post('/transactions', async (req, res) => {
     const {
-        userId,
         partyName,
         category,
         entryType,
@@ -469,25 +384,17 @@ app.post('/transactions', async (req, res) => {
     } = req.body;
 
     try {
+        const appUser = await getOrSyncAppUserFromRequest(toWebRequest(req));
         const normalizedPartyName = partyName?.trim();
         const normalizedCategory = category?.trim();
         const normalizedEntryType = VALID_TRANSACTION_TYPES.has(entryType) ? entryType : null;
         const normalizedStatus = VALID_TRANSACTION_STATUSES.has(status) ? status : 'Pending';
         const parsedAmount = Number(amount);
 
-        if (!userId || !normalizedPartyName || !normalizedCategory || !normalizedEntryType || Number.isNaN(parsedAmount) || parsedAmount < 0) {
+        if (!normalizedPartyName || !normalizedCategory || !normalizedEntryType || Number.isNaN(parsedAmount) || parsedAmount < 0) {
             return res.status(400).json({
-                error: 'userId, partyName, category, entryType, and a valid amount are required.'
+                error: 'partyName, category, entryType, and a valid amount are required.'
             });
-        }
-
-        const userExists = await pool.query(
-            'SELECT user_id FROM users WHERE user_id = $1',
-            [userId]
-        );
-
-        if (userExists.rowCount === 0) {
-            return res.status(404).json({ error: 'User not found.' });
         }
 
         const result = await pool.query(
@@ -520,7 +427,7 @@ app.post('/transactions', async (req, res) => {
                     created_at
             `,
             [
-                userId,
+                appUser.user_id,
                 normalizedPartyName,
                 normalizedCategory,
                 normalizedEntryType,
@@ -535,12 +442,31 @@ app.post('/transactions', async (req, res) => {
 
         res.status(201).json(result.rows[0]);
     } catch (err) {
+        if (err instanceof UnauthorizedError) {
+            return res.status(err.status).json({ error: err.message });
+        }
+
         console.error('Database error:', err.message);
         res.status(500).json({
             error: 'Could not create transaction.',
             details: process.env.NODE_ENV === 'production' ? undefined : err.message
         });
     }
+});
+
+app.get('/health', (_req, res) => {
+    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Catch-all for unknown routes -> return JSON 404 (prevents HTML responses)
+app.use((req, res) => {
+    res.status(404).json({ error: 'Not found', path: req.originalUrl });
+});
+
+// Error handler middleware to ensure JSON responses on server errors
+app.use((err, req, res, _next) => {
+    console.error('Unhandled error:', err && err.stack ? err.stack : err);
+    res.status(500).json({ error: 'Internal server error' });
 });
 
 const startServer = async () => {

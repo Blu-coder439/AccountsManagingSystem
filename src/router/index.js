@@ -1,4 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { clearCurrentUser, getCurrentUser, syncCurrentUserProfile } from '@/utils/auth-session'
+import { supabase } from '@/utils/supabase'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -45,5 +47,44 @@ const router = createRouter({
     },
   ],
 })
+
+const protectedRouteNames = new Set(['dashboard', 'transactions', 'reports', 'settings']);
+const guestOnlyRouteNames = new Set(['login', 'signup']);
+
+router.beforeEach(async (to) => {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (protectedRouteNames.has(to.name)) {
+    if (!user) {
+      clearCurrentUser();
+      return { name: 'login' };
+    }
+
+    if (!getCurrentUser()) {
+      try {
+        await syncCurrentUserProfile();
+      } catch {
+        clearCurrentUser();
+        return { name: 'login' };
+      }
+    }
+  }
+
+  if (guestOnlyRouteNames.has(to.name) && user) {
+    if (!getCurrentUser()) {
+      try {
+        await syncCurrentUserProfile();
+      } catch {
+        clearCurrentUser();
+      }
+    }
+
+    return { name: 'dashboard' };
+  }
+
+  return true;
+});
 
 export default router

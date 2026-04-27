@@ -2,7 +2,7 @@
 import Sidebar from '@/components/ui/admin/sidebar.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { apiUrl } from '@/utils/api-base';
+import { apiFetchWithAuth, getCurrentUser, signOutCurrentUser } from '@/utils/auth-session';
 import { useDisplayCurrency } from '@/composables/use-display-currency';
 
 const router = useRouter();
@@ -103,7 +103,7 @@ const loadProcesses = async () => {
   errorMessage.value = '';
 
   try {
-    const response = await fetch(apiUrl(`/processes?userId=${currentUser.value.user_id}`));
+    const response = await apiFetchWithAuth('/processes');
     const data = await response.json();
 
     if (!response.ok) {
@@ -123,13 +123,9 @@ const createProcess = async () => {
   isSubmitting.value = true;
 
   try {
-    const response = await fetch(apiUrl('/processes'), {
+    const response = await apiFetchWithAuth('/processes', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
       body: JSON.stringify({
-        userId: currentUser.value.user_id,
         title: form.value.title.trim(),
         description: form.value.description.trim(),
         status: form.value.status
@@ -155,20 +151,20 @@ const createProcess = async () => {
   }
 };
 
-const logout = () => {
-  localStorage.removeItem('currentUser');
+const logout = async () => {
+  await signOutCurrentUser();
   router.push('/login');
 };
 
 onMounted(async () => {
-  const savedUser = localStorage.getItem('currentUser');
+  const user = getCurrentUser();
 
-  if (!savedUser) {
+  if (!user) {
     router.push('/login');
     return;
   }
 
-  currentUser.value = JSON.parse(savedUser);
+  currentUser.value = user;
   await loadProcesses();
 });
 </script>

@@ -1,7 +1,8 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { apiUrl } from '@/utils/api-base';
+import { supabase } from '@/utils/supabase';
+import { syncCurrentUserProfile } from '@/utils/auth-session';
 
 // --- STYLING CONSTANTS ---
 const inputStyles = "w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-600 transition-all placeholder:text-slate-300";
@@ -25,32 +26,17 @@ const handleLogin = async () => {
     isSubmitting.value = true;
 
     try {
-        const response = await fetch(apiUrl('/api/auth/login'), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                email: email.value.trim(),
-                password: password.value
-            })
+        const { error } = await supabase.auth.signInWithPassword({
+            email: email.value.trim(),
+            password: password.value
         });
 
-        const contentType = response.headers.get('content-type') || '';
-        let data;
-        if (contentType.includes('application/json')) {
-          data = await response.json();
-        } else {
-          const text = await response.text();
-          throw new Error(`Expected JSON response but received: ${text.slice(0,200)}`);
+        if (error) {
+          throw error;
         }
 
-        if (!response.ok) {
-          throw new Error(data && data.error ? data.error : 'Login failed.');
-        }
-
-        const displayName = data.user.full_name || data.user.business_name || data.user.email;
-        localStorage.setItem('currentUser', JSON.stringify(data.user));
+        const currentUser = await syncCurrentUserProfile();
+        const displayName = currentUser.full_name || currentUser.business_name || currentUser.email;
         successMessage.value = `Welcome back, ${displayName}.`;
         email.value = '';
         password.value = '';

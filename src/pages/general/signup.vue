@@ -1,7 +1,8 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { apiUrl } from '@/utils/api-base';
+import { syncCurrentUserProfile } from '@/utils/auth-session';
+import { supabase } from '@/utils/supabase';
 
 const inputStyles = "w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-600 transition-all placeholder:text-slate-300";
 const labelStyles = "block text-sm font-semibold text-slate-800 mb-1.5";
@@ -43,54 +44,52 @@ const submitSignup = async () => {
   isSubmitting.value = true;
 
   try {
-    // Build payload conditionally to omit empty fields
-    const payload = {
+    const profilePayload = {
       accountType: accountType.value,
       email: form.value.email.trim(),
-      password: form.value.password
     };
 
     if (accountType.value === 'client') {
-      payload.fullName = form.value.fullName.trim();
-      payload.city = form.value.city.trim();
+      profilePayload.fullName = form.value.fullName.trim();
+      profilePayload.city = form.value.city.trim();
       if (form.value.phone.trim()) {
-        payload.phone = form.value.phone.trim();
+        profilePayload.phone = form.value.phone.trim();
       }
-      // Ensure business fields are not sent for clients
-      // (businessName and businessType are not added)
     }
     if (accountType.value === 'business') {
-      payload.businessName = form.value.businessName.trim();
-      payload.businessType = form.value.businessType;
-      // Do not add phone for business accounts
+      profilePayload.businessName = form.value.businessName.trim();
+      profilePayload.businessType = form.value.businessType;
     }
 
-    const response = await fetch(apiUrl('/api/auth/signup'), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
+    const { data, error } = await supabase.auth.signUp({
+      email: form.value.email.trim(),
+      password: form.value.password,
+      options: {
+        data: {
+          accountType: profilePayload.accountType,
+          fullName: profilePayload.fullName || null,
+          businessName: profilePayload.businessName || null,
+          businessType: profilePayload.businessType || null,
+          city: profilePayload.city || null,
+          phone: profilePayload.phone || null,
+        },
       },
-      body: JSON.stringify(payload)
     });
 
-    const contentType = response.headers.get('content-type') || '';
-    let data;
-    if (contentType.includes('application/json')) {
-      data = await response.json();
+    if (error) {
+      throw error;
+    }
+
+    if (data.session) {
+      await syncCurrentUserProfile(profilePayload, '/api/auth/signup');
+      successMessage.value = 'Account created successfully. Redirecting to login...';
     } else {
-      const text = await response.text();
-      throw new Error(`Expected JSON response but received: ${text.slice(0, 200)}`);
+      successMessage.value = 'Account created. Check your email to confirm your address before logging in.';
     }
-
-    if (!response.ok) {
-      throw new Error(data.error || 'Signup failed.');
-    }
-
-    successMessage.value = `Account created successfully. Redirecting to login...`;
 
     setTimeout(() => {
       router.push('/login');
-    }, 1000);
+    }, data.session ? 1000 : 1600);
   } catch (error) {
     errorMessage.value = error instanceof TypeError
       ? 'Could not reach the signup service. Make sure the backend is running locally or the deployment is configured correctly.'

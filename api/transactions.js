@@ -1,20 +1,16 @@
+import { getOrSyncAppUserFromRequest } from '../lib/server/app-user.js';
 import { ensureDatabaseSchema, pool } from '../lib/server/database.js';
 import {
   VALID_TRANSACTION_STATUSES,
   VALID_TRANSACTION_TYPES,
 } from '../lib/server/constants.js';
 import { errorResponse, json, methodNotAllowed, parseJsonBody } from '../lib/server/http.js';
+import { UnauthorizedError } from '../lib/server/supabase.js';
 
 export async function GET(request) {
   try {
     await ensureDatabaseSchema();
-
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return errorResponse(400, 'userId is required.');
-    }
+    const appUser = await getOrSyncAppUserFromRequest(request);
 
     const result = await pool.query(
       `
@@ -35,11 +31,15 @@ export async function GET(request) {
         WHERE user_id = $1
         ORDER BY transaction_date DESC, transaction_id DESC
       `,
-      [userId],
+      [appUser.user_id],
     );
 
     return json(result.rows);
   } catch (error) {
+    if (error instanceof UnauthorizedError) {
+      return errorResponse(error.status, error.message);
+    }
+
     console.error('Transactions GET error:', error);
     return errorResponse(
       500,
@@ -52,9 +52,9 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     await ensureDatabaseSchema();
+    const appUser = await getOrSyncAppUserFromRequest(request);
 
     const {
-      userId,
       partyName,
       category,
       entryType,
@@ -73,7 +73,6 @@ export async function POST(request) {
     const parsedAmount = Number(amount);
 
     if (
-      !userId ||
       !normalizedPartyName ||
       !normalizedCategory ||
       !normalizedEntryType ||
@@ -82,14 +81,8 @@ export async function POST(request) {
     ) {
       return errorResponse(
         400,
-        'userId, partyName, category, entryType, and a valid amount are required.',
+        'partyName, category, entryType, and a valid amount are required.',
       );
-    }
-
-    const userExists = await pool.query('SELECT user_id FROM users WHERE user_id = $1', [userId]);
-
-    if (userExists.rowCount === 0) {
-      return errorResponse(404, 'User not found.');
     }
 
     const result = await pool.query(
@@ -122,7 +115,7 @@ export async function POST(request) {
           created_at
       `,
       [
-        userId,
+        appUser.user_id,
         normalizedPartyName,
         normalizedCategory,
         normalizedEntryType,
@@ -137,6 +130,10 @@ export async function POST(request) {
 
     return json(result.rows[0], { status: 201 });
   } catch (error) {
+    if (error instanceof UnauthorizedError) {
+      return errorResponse(error.status, error.message);
+    }
+
     console.error('Transactions POST error:', error);
     return errorResponse(
       500,

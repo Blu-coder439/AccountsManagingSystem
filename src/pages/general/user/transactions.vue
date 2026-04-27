@@ -2,7 +2,7 @@
 import Sidebar from '@/components/ui/admin/sidebar.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { apiUrl } from '@/utils/api-base';
+import { apiFetchWithAuth, getCurrentUser, signOutCurrentUser } from '@/utils/auth-session';
 import { useDisplayCurrency } from '@/composables/use-display-currency';
 
 const router = useRouter();
@@ -294,7 +294,7 @@ const loadTransactions = async () => {
   errorMessage.value = '';
 
   try {
-    const response = await fetch(apiUrl(`/transactions?userId=${currentUser.value.user_id}`));
+    const response = await apiFetchWithAuth('/transactions');
     const data = await response.json();
 
     if (!response.ok) {
@@ -329,13 +329,9 @@ const createTransaction = async () => {
   isSubmitting.value = true;
 
   try {
-    const response = await fetch(apiUrl('/transactions'), {
+    const response = await apiFetchWithAuth('/transactions', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
       body: JSON.stringify({
-        userId: currentUser.value.user_id,
         partyName: form.value.partyName.trim(),
         category: form.value.category.trim(),
         entryType: form.value.entryType,
@@ -369,20 +365,20 @@ const handleSidebarToggle = (expanded) => {
   isSidebarExpanded.value = expanded;
 };
 
-const logout = () => {
-  localStorage.removeItem('currentUser');
+const logout = async () => {
+  await signOutCurrentUser();
   router.push('/login');
 };
 
 onMounted(async () => {
-  const savedUser = localStorage.getItem('currentUser');
+  const user = getCurrentUser();
 
-  if (!savedUser) {
+  if (!user) {
     router.push('/login');
     return;
   }
 
-  currentUser.value = JSON.parse(savedUser);
+  currentUser.value = user;
   await loadTransactions();
 });
 </script>

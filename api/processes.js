@@ -1,17 +1,13 @@
+import { getOrSyncAppUserFromRequest } from '../lib/server/app-user.js';
 import { ensureDatabaseSchema, pool } from '../lib/server/database.js';
 import { VALID_PROCESS_STATUSES } from '../lib/server/constants.js';
 import { errorResponse, json, methodNotAllowed, parseJsonBody } from '../lib/server/http.js';
+import { UnauthorizedError } from '../lib/server/supabase.js';
 
 export async function GET(request) {
   try {
     await ensureDatabaseSchema();
-
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return errorResponse(400, 'userId is required.');
-    }
+    const appUser = await getOrSyncAppUserFromRequest(request);
 
     const result = await pool.query(
       `
@@ -26,11 +22,15 @@ export async function GET(request) {
         WHERE user_id = $1
         ORDER BY created_at DESC, process_id DESC
       `,
-      [userId],
+      [appUser.user_id],
     );
 
     return json(result.rows);
   } catch (error) {
+    if (error instanceof UnauthorizedError) {
+      return errorResponse(error.status, error.message);
+    }
+
     console.error('Processes GET error:', error);
     return errorResponse(
       500,
@@ -43,19 +43,14 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     await ensureDatabaseSchema();
+    const appUser = await getOrSyncAppUserFromRequest(request);
 
-    const { userId, title, description, status } = await parseJsonBody(request);
+    const { title, description, status } = await parseJsonBody(request);
     const normalizedTitle = title?.trim();
     const normalizedStatus = VALID_PROCESS_STATUSES.has(status) ? status : 'pending';
 
-    if (!userId || !normalizedTitle) {
-      return errorResponse(400, 'userId and title are required.');
-    }
-
-    const userExists = await pool.query('SELECT user_id FROM users WHERE user_id = $1', [userId]);
-
-    if (userExists.rowCount === 0) {
-      return errorResponse(404, 'User not found.');
+    if (!normalizedTitle) {
+      return errorResponse(400, 'Title is required.');
     }
 
     const result = await pool.query(
@@ -69,11 +64,15 @@ export async function POST(request) {
         VALUES ($1, $2, $3, $4)
         RETURNING process_id, user_id, title, description, status, created_at
       `,
-      [userId, normalizedTitle, description?.trim() || null, normalizedStatus],
+      [appUser.user_id, normalizedTitle, description?.trim() || null, normalizedStatus],
     );
 
     return json(result.rows[0], { status: 201 });
   } catch (error) {
+    if (error instanceof UnauthorizedError) {
+      return errorResponse(error.status, error.message);
+    }
+
     console.error('Processes POST error:', error);
     return errorResponse(
       500,

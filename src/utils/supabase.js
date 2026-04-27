@@ -14,9 +14,18 @@ const makeStub = (message) => {
       delete: rejected('from().delete')
     }),
     auth: {
-      signIn: rejected('auth.signIn'),
+      signInWithPassword: rejected('auth.signInWithPassword'),
+      signUp: rejected('auth.signUp'),
       signOut: rejected('auth.signOut'),
-      getUser: () => null
+      getUser: rejected('auth.getUser'),
+      getSession: rejected('auth.getSession'),
+      onAuthStateChange: () => ({
+        data: {
+          subscription: {
+            unsubscribe() {},
+          },
+        },
+      }),
     },
     rpc: rejected('rpc')
   };

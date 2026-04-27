@@ -109,6 +109,8 @@
 </template>
 
 <script>
+import { signOutCurrentUser } from '@/utils/auth-session';
+
 export default {
   name: "AdminSidebar",
   emits: ["menuSelect", "toggle"],
@@ -164,10 +166,8 @@ export default {
         this.$router.push('/settings');
       }
     },
-    signOut() {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      localStorage.removeItem("currentUser");
+    async signOut() {
+      await signOutCurrentUser();
       this.$router.push("/login");
     },
   },
