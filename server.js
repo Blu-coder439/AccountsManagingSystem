@@ -15,6 +15,7 @@ const projectRoot = __dirname;
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
+const envValue = (name) => process.env[name]?.trim();
 const VALID_PROCESS_STATUSES = new Set(['pending', 'in_progress', 'completed']);
 const VALID_TRANSACTION_TYPES = new Set(['Revenue', 'Expense', 'Receivable', 'Payable']);
 const VALID_TRANSACTION_STATUSES = new Set([
@@ -75,29 +76,29 @@ const toWebRequest = (req) =>
     });
 
 const createPool = () => {
-    const connectionString = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
+    const connectionString = envValue('DATABASE_URL') || envValue('SUPABASE_DB_URL');
     const shouldUseSsl =
-        process.env.PGSSLMODE === 'require' ||
-        process.env.NODE_ENV === 'production' ||
+        envValue('PGSSLMODE') === 'require' ||
+        envValue('NODE_ENV') === 'production' ||
         Boolean(connectionString?.includes('supabase'));
 
     if (connectionString) {
         return new Pool({
             connectionString,
             ssl: shouldUseSsl
-                ? { rejectUnauthorized: process.env.PG_SSL_REJECT_UNAUTHORIZED !== 'false' }
+                ? { rejectUnauthorized: envValue('PG_SSL_REJECT_UNAUTHORIZED') !== 'false' }
                 : false
         });
     }
 
     return new Pool({
-        host: process.env.PGHOST || 'localhost',
-        port: Number(process.env.PGPORT || 5432),
-        user: process.env.PGUSER || 'postgres',
-        password: process.env.PGPASSWORD || 'postgres',
-        database: process.env.PGDATABASE || 'demographic',
+        host: envValue('PGHOST') || 'localhost',
+        port: Number(envValue('PGPORT') || 5432),
+        user: envValue('PGUSER') || 'postgres',
+        password: envValue('PGPASSWORD') || 'postgres',
+        database: envValue('PGDATABASE') || 'demographic',
         ssl: shouldUseSsl
-            ? { rejectUnauthorized: process.env.PG_SSL_REJECT_UNAUTHORIZED !== 'false' }
+            ? { rejectUnauthorized: envValue('PG_SSL_REJECT_UNAUTHORIZED') !== 'false' }
             : false
     });
 };
