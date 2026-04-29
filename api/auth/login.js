@@ -4,7 +4,9 @@ import { UnauthorizedError } from '../../lib/server/supabase.js';
 
 export async function POST(request) {
   try {
+    // safely parse body with fallback to {}
     const profileOverrides = await parseJsonBody(request).catch(() => ({}));
+
     const user = await getOrSyncAppUserFromRequest(request, profileOverrides, {
       createIfMissing: true,
       touchLastLogin: true,
@@ -23,7 +25,7 @@ export async function POST(request) {
     return errorResponse(
       500,
       'Login sync failed',
-      process.env.NODE_ENV === 'production' ? undefined : error.message,
+      process.env.NODE_ENV === 'production' ? undefined : (error?.message || String(error)),
     );
   }
 }
