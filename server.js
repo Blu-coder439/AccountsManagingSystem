@@ -71,8 +71,14 @@ app.use(express.json());
 const toWebRequest = (req) =>
     new Request(`http://localhost${req.originalUrl}`, {
         method: req.method,
-        headers: req.headers,
-        body: ['GET', 'HEAD'].includes(req.method) ? undefined : JSON.stringify(req.body || {})
+        headers: {
+      authorization: req.headers.authorization || '',
+      cookie: req.headers.cookie || '',
+      'content-type': 'application/json'
+    },
+        body: ['GET', 'HEAD'].includes(req.method)
+      ? undefined
+      : JSON.stringify(req.body || {})
     });
 
 const createPool = () => {
