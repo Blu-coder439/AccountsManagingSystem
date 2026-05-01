@@ -9,7 +9,18 @@
                 <p class="mt-5 text-sm leading-7 text-slate-500">
                     Making financial management simpler and accessible for small businesses worldwide.
                 </p>
+                <div>
+                     <span class= "mt-5 text-sm leading-7 font-bold text-slate-500">Address :</span><br>
+                 <span class= "mt-5 text-sm leading-7 text-slate-500">12 Rue de la Paix, 3rd Floor</span>
+               <br>
+                  <span class= "mt-5 text-sm leading-7 text-slate-500"> Accra,Ghana</span>
+                  
+                 
+                 </div>
+          
+
             </div>
+            
 
             <div>
                 <h3 class="text-sm font-bold text-slate-950">Product</h3>
@@ -17,7 +28,7 @@
                     <li><a href="#features" class="transition hover:text-blue-600">Features</a></li>
                     <li><a href="#invoicing" class="transition hover:text-blue-600">Invoicing</a></li>
                     <li><a href="#reporting" class="transition hover:text-blue-600">Reporting</a></li>
-                    <li><a href="#mobile" class="transition hover:text-blue-600">Mobile</a></li>
+                    <li><a href="#mobile" class="transition hover:text-blue-600">Transactions</a></li>
                 </ul>
             </div>
 
