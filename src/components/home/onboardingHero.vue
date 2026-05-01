@@ -46,7 +46,7 @@
                 src="https://i.pravatar.cc/100" alt="User">
             </div>
             <p class="text-sm text-white">
-              Join <span class="font-bold text-white">12,000+</span> businesses growing with FinFlow
+              Join <span class="font-bold text-white">12,000+</span> businesses growing with Accentra
             </p>
           </div>
         </div>

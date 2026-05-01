@@ -37,7 +37,7 @@ const services = [
           Everything you need to grow
         </h2>
         <p class="text-lg text-slate-600 leading-relaxed">
-          FinFlow simplifies your back-office tasks so you can focus on what you love. 
+          Accentra simplifies your back-office tasks so you can focus on what you love. 
           Our platform is built to handle the heavy lifting of finance management.
         </p>
       </div>

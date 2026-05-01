@@ -69,15 +69,9 @@ const togglePassword = () => { showPassword.value = !showPassword.value; };
           class="absolute inset-0 w-full h-full object-cover"
           alt="Login background"
         />
-        <div class="absolute top-10 left-10">
-          <div class="rounded-2xl border border-white/20 bg-white/10 px-5 py-3 backdrop-blur-md">
-             <span class="text-2xl font-black uppercase italic tracking-tighter text-white">
-               Fin<span class="text-blue-400">Flow</span>
-             </span>
-          </div>
-        </div>
+        
         <div class="absolute bottom-12 left-10 right-10">
-          <p class="text-white/70 text-sm font-medium mb-2">FinFlow Professional</p>
+          <p class="text-white/70 text-sm font-medium mb-2">Accentra</p>
           <h2 class="text-white text-3xl font-bold leading-tight">
             Welcome back to the future of finance management.
           </h2>

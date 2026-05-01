@@ -3,10 +3,8 @@
         <div class="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1.2fr_repeat(4,0.8fr)]">
             <div class="max-w-xs">
                 <div class="flex items-center gap-3">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-sm font-black text-white">
-                        F
-                    </div>
-                    <span class="text-lg font-extrabold tracking-tight text-slate-950">FinFlow</span>
+                   
+                    <span class="text-lg font-extrabold tracking-tight text-slate-950">Accentra</span>
                 </div>
                 <p class="mt-5 text-sm leading-7 text-slate-500">
                     Making financial management simpler and accessible for small businesses worldwide.
@@ -39,7 +37,7 @@
                     <li><a href="#documentation" class="transition hover:text-blue-600">Documentation</a></li>
                     <li><a href="#help-center" class="transition hover:text-blue-600">Help Center</a></li>
                     <li><a href="#security" class="transition hover:text-blue-600">Security</a></li>
-                    <li><a href="#api" class="transition hover:text-blue-600">API</a></li>
+                    
                 </ul>
             </div>
 
