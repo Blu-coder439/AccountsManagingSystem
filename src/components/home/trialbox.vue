@@ -24,11 +24,7 @@
                     >
                         Start Free Trial
                     </button>
-                    <button
-                        class="rounded-full border border-white/20 bg-white/5 px-7 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
-                    >
-                        Book a Demo
-                    </button>
+                   
                 </div>
             </div>
 

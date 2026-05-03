@@ -9,14 +9,21 @@
                 <p class="mt-5 text-sm leading-7 text-slate-500">
                     Making financial management simpler and accessible for small businesses worldwide.
                 </p>
-                <div>
-                     <span class= "mt-5 text-sm leading-7 font-bold text-slate-500">Address :</span><br>
-                 <span class= "mt-5 text-sm leading-7 text-slate-500">12 Rue de la Paix, 3rd Floor</span>
-               <br>
-                  <span class= "mt-5 text-sm leading-7 text-slate-500"> Accra,Ghana</span>
-                  
-                 
+                <div class="flex flex-col gap-1 text-sm leading-7 text-slate-500">
+                     <span >Address :</span>
+                 <span >12 Rue de la Paix, 3rd Floor</span>
+               
+                  <span > Accra,Ghana</span>
+                              
+                 <span class="mt-1 text-sm leading-7 text-slate-500 flex items-center gap-1">
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-4 h-4">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+      d="M3 6.75A2.25 2.25 0 015.25 4.5h13.5A2.25 2.25 0 0121 6.75v10.5A2.25 2.25 0 0118.75 19.5H5.25A2.25 2.25 0 013 17.25V6.75zm0 0l9 6 9-6" />
+  </svg>
+  accentra.co@gmail.com
+</span>
                  </div>
+                 
           
 
             </div>

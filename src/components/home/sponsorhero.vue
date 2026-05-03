@@ -2,7 +2,7 @@
 const sponsors = [
   { id: 1, name: 'Minnova', logo: 'https://via.placeholder.com/160x80?text=Company+A' },
   { id: 2, name: 'Cornerstone Consult', logo: 'https://via.placeholder.com/160x80?text=Company+B' },
-  { id: 3, name: 'Hubtel', logo: 'https://via.placeholder.com/160x80?text=Company+C' },
+  { id: 3, name: 'Hubtel', logo: 'https://via.placeholder.com/160x80?text=Hubtel' },
   { id: 4, name: 'McDan Group', logo: 'https://via.placeholder.com/160x80?text=Company+D' }
 ]
 </script>
