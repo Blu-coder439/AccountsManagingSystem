@@ -22,7 +22,7 @@
                     <button
                         class="rounded-full bg-blue-500 px-7 py-3 text-sm font-semibold text-white transition hover:bg-blue-400"
                     >
-                        Start Free Trial
+                        GET STARTED
                     </button>
                    
                 </div>
