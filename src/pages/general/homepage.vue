@@ -3,6 +3,7 @@
 <hero2 />
 <sponsor-hero />
 <review-hero />
+<middlehero />
 <trialbox />
 <menu-hero />
 <copyright-footer />
@@ -11,6 +12,7 @@
 <script setup>
 import { onMounted } from "vue"
 import CopyrightFooter from "@/components/home/copyrightfooter.vue"
+import Middlehero from "@/components/home/Middlehero.vue"
 import MenuHero from "@/components/home/menuhero.vue"
 import OnboardingHero from "@/components/home/onboardingHero.vue"
 import hero2 from "@/components/home/hero2.vue"
