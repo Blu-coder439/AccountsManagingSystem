@@ -32,6 +32,9 @@ const handleLogin = async () => {
         });
 
         if (error) {
+          if (error.status === 400) {
+            throw new Error('Invalid email or password. If you just signed up, please confirm your email first.');
+          }
           throw error;
         }
 

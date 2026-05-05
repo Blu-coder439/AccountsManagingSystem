@@ -1,12 +1,16 @@
 import express from 'express';
-import fs from 'fs';
 import pkg from 'pg';
 import cors from 'cors';
 import crypto from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { loadEnvFile, getEnv } from './lib/server/env.js';
 import { getOrSyncAppUserFromRequest } from './lib/server/app-user.js';
 import { UnauthorizedError } from './lib/server/supabase.js';
+
+// Load environment variables first
+loadEnvFile('.env');
+loadEnvFile(process.env.NODE_ENV === 'production' ? '.env.production' : '.env.local');
 
 const { Pool } = pkg;
 const __filename = fileURLToPath(import.meta.url);
@@ -29,41 +33,6 @@ const VALID_TRANSACTION_STATUSES = new Set([
     'Urgent',
     'Upcoming'
 ]);
-
-const loadEnvFile = (filename) => {
-    const filePath = path.join(projectRoot, filename);
-
-    if (!fs.existsSync(filePath)) {
-        return;
-    }
-
-    const fileContents = fs.readFileSync(filePath, 'utf8');
-
-    fileContents.split(/\r?\n/).forEach((line) => {
-        const trimmedLine = line.trim();
-
-        if (!trimmedLine || trimmedLine.startsWith('#')) {
-            return;
-        }
-
-        const equalsIndex = trimmedLine.indexOf('=');
-
-        if (equalsIndex === -1) {
-            return;
-        }
-
-        const key = trimmedLine.slice(0, equalsIndex).trim();
-        const rawValue = trimmedLine.slice(equalsIndex + 1).trim();
-        const normalizedValue = rawValue.replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1');
-
-        if (!(key in process.env)) {
-            process.env[key] = normalizedValue;
-        }
-    });
-};
-
-loadEnvFile('.env');
-loadEnvFile(process.env.NODE_ENV === 'production' ? '.env.production' : '.env.local');
 
 app.use(cors());
 app.use(express.json());
