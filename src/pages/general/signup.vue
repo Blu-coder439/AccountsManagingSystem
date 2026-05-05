@@ -82,14 +82,18 @@ const submitSignup = async () => {
 
     if (data.session) {
       await syncCurrentUserProfile(profilePayload, '/api/auth/signup');
-      successMessage.value = 'Account created successfully. Redirecting to login...';
+      successMessage.value = 'Account created successfully. Redirecting to dashboard...';
     } else {
-      successMessage.value = 'Account created. Check your email to confirm your address before logging in.';
+      successMessage.value = 'Account created! A confirmation email has been sent. Please verify your email before logging in.';
     }
 
     setTimeout(() => {
-      router.push('/login');
-    }, data.session ? 1000 : 1600);
+      if (data.session) {
+        router.push('/dashboard');
+      } else {
+        router.push('/login');
+      }
+    }, data.session ? 1000 : 2000);
   } catch (error) {
     errorMessage.value = error instanceof TypeError
       ? 'Could not reach the signup service. Make sure the backend is running locally or the deployment is configured correctly.'

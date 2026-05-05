@@ -3,8 +3,15 @@
   "version": 2,
   "buildCommand": "vite build",
   "outputDirectory": "dist",
+  "env": {
+    "VITE_SUPABASE_URL": "@vite_supabase_url",
+    "VITE_SUPABASE_PUBLISHABLE_KEY": "@vite_supabase_publishable_key",
+    "NODE_ENV": "production",
+    "PORT": "3000"
+  },
   "routes": [
     { "handle": "filesystem" },
+    { "src": "/api/(.*)", "dest": "/index.html" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
