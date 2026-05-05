@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import { loadEnvFile, getEnv } from './lib/server/env.js';
 import { getOrSyncAppUserFromRequest } from './lib/server/app-user.js';
 import { UnauthorizedError } from './lib/server/supabase.js';
+import { createPostgresSslConfig } from './lib/server/postgres-ssl.js';
 
 // Load environment variables first
 loadEnvFile('.env');
@@ -46,17 +47,12 @@ const toWebRequest = (req) =>
 
 const createPool = () => {
     const connectionString = envValue('DATABASE_URL') || envValue('SUPABASE_DB_URL');
-    const shouldUseSsl =
-        envValue('PGSSLMODE') === 'require' ||
-        envValue('NODE_ENV') === 'production' ||
-        Boolean(connectionString?.includes('supabase'));
+    const ssl = createPostgresSslConfig({ connectionString, envValue });
 
     if (connectionString) {
         return new Pool({
             connectionString,
-            ssl: shouldUseSsl
-                ? { rejectUnauthorized: envValue('PG_SSL_REJECT_UNAUTHORIZED') !== 'false' }
-                : false
+            ssl
         });
     }
 
@@ -66,9 +62,7 @@ const createPool = () => {
         user: envValue('PGUSER') || 'postgres',
         password: envValue('PGPASSWORD') || 'postgres',
         database: envValue('PGDATABASE') || 'demographic',
-        ssl: shouldUseSsl
-            ? { rejectUnauthorized: envValue('PG_SSL_REJECT_UNAUTHORIZED') !== 'false' }
-            : false
+        ssl
     });
 };
 
