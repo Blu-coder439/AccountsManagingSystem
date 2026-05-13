@@ -59,6 +59,16 @@ const getSignupErrorMessage = (error) => {
   return message;
 };
 
+const getProfileSyncErrorMessage = (error) => {
+  const message = error?.message || String(error);
+
+  if (/signup sync failed/i.test(message)) {
+    return 'Your Supabase Auth account was created, but the app profile could not be saved. Please log in once, or check the Vercel database connection.';
+  }
+
+  return `Your Supabase Auth account was created, but the app profile could not be saved: ${message}`;
+};
+
 const submitSignup = async () => {
   errorMessage.value = '';
   successMessage.value = '';
@@ -110,10 +120,16 @@ const submitSignup = async () => {
     }
 
     if (data.session) {
-      await syncCurrentUserProfile(profilePayload, '/api/auth/signup');
+      try {
+        await syncCurrentUserProfile(profilePayload, '/api/auth/signup');
+      } catch (syncError) {
+        console.error('Signup profile sync error:', syncError);
+        errorMessage.value = getProfileSyncErrorMessage(syncError);
+        return;
+      }
       successMessage.value = 'Account created successfully. Redirecting to dashboard...';
     } else {
-      successMessage.value = 'Account created! A confirmation email has been sent. Please verify your email before logging in.';
+      successMessage.value = 'Account created in Supabase Auth. Please confirm your email, then log in to finish creating your app profile.';
     }
 
     setTimeout(() => {
