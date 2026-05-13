@@ -1,4 +1,10 @@
-import { errorResponse, json, methodNotAllowed, parseJsonBody } from '../../lib/server/http.js';
+import {
+  errorResponse,
+  json,
+  methodNotAllowed,
+  parseJsonBody,
+  safeErrorDetails,
+} from '../../lib/server/http.js';
 import { getOrSyncAppUserFromRequest } from '../../lib/server/app-user.js';
 import { UnauthorizedError } from '../../lib/server/supabase.js';
 
@@ -20,7 +26,7 @@ export async function POST(request) {
     return errorResponse(
       500,
       'Signup sync failed.',
-      process.env.NODE_ENV === 'production' ? undefined : error.message,
+      safeErrorDetails(error),
     );
   }
 }
