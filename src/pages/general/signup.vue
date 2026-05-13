@@ -38,15 +38,37 @@ const togglePassword = () => {
   showPassword.value = !showPassword.value;
 };
 
+const normalizeEmail = (email) => email.trim().toLowerCase();
+
+const getSignupErrorMessage = (error) => {
+  const message = error?.message || String(error);
+  const code = error?.code || '';
+
+  if (code === 'user_already_exists' || /already registered/i.test(message)) {
+    return 'An account already exists for this email. Please log in instead.';
+  }
+
+  if (/password/i.test(message)) {
+    return message;
+  }
+
+  if (error?.status === 422) {
+    return `${message} Please check the email, password, and Supabase Auth settings.`;
+  }
+
+  return message;
+};
+
 const submitSignup = async () => {
   errorMessage.value = '';
   successMessage.value = '';
   isSubmitting.value = true;
 
   try {
+    const email = normalizeEmail(form.value.email);
     const profilePayload = {
       accountType: accountType.value,
-      email: form.value.email.trim(),
+      email,
     };
 
     if (accountType.value === 'client') {
@@ -62,9 +84,10 @@ const submitSignup = async () => {
     }
 
     const { data, error } = await supabase.auth.signUp({
-      email: form.value.email.trim(),
+      email,
       password: form.value.password,
       options: {
+        emailRedirectTo: `${window.location.origin}/login`,
         data: {
           accountType: profilePayload.accountType,
           fullName: profilePayload.fullName || null,
@@ -77,6 +100,12 @@ const submitSignup = async () => {
     });
 
     if (error) {
+      console.error('Supabase signup error:', {
+        code: error.code,
+        name: error.name,
+        status: error.status,
+        message: error.message,
+      });
       throw error;
     }
 
@@ -97,7 +126,7 @@ const submitSignup = async () => {
   } catch (error) {
     errorMessage.value = error instanceof TypeError
       ? 'Could not reach the signup service. Make sure the backend is running locally or the deployment is configured correctly.'
-      : error.message;
+      : getSignupErrorMessage(error);
   } finally {
     isSubmitting.value = false;
   }
