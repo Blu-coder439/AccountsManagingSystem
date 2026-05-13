@@ -81,7 +81,9 @@ export const syncCurrentUserProfile = async (profileOverrides = {}, endpoint = '
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.error || 'Could not sync account profile.');
+    const details = data.details?.message ? ` ${data.details.message}` : '';
+    const code = data.details?.code ? ` [${data.details.code}]` : '';
+    throw new Error(`${data.error || 'Could not sync account profile.'}${code}.${details}`.trim());
   }
 
   return setCurrentUser(data.user || data);
