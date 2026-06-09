@@ -1,9 +1,9 @@
 <script setup>
 const sponsors = [
-  { id: 1, name: 'Company A', logo: 'https://via.placeholder.com/160x80?text=Company+A' },
-  { id: 2, name: 'Company B', logo: 'https://via.placeholder.com/160x80?text=Company+B' },
-  { id: 3, name: 'Company C', logo: 'https://via.placeholder.com/160x80?text=Company+C' },
-  { id: 4, name: 'Company D', logo: 'https://via.placeholder.com/160x80?text=Company+D' }
+  { id: 1, name: 'Minnova', logo: 'https://via.placeholder.com/160x80?text=Company+A' },
+  { id: 2, name: 'Cornerstone Consult', logo: 'https://via.placeholder.com/160x80?text=Company+B' },
+  { id: 3, name: 'Hubtel', logo: 'https://via.placeholder.com/160x80?text=Hubtel' },
+  { id: 4, name: 'McDan Group', logo: 'https://via.placeholder.com/160x80?text=Company+D' }
 ]
 </script>
 
@@ -24,7 +24,7 @@ const sponsors = [
         </h2>
 
         <p class="text-lg leading-relaxed text-slate-600">
-          Teams choose FinFlow for reliable automation, cleaner reporting, and a finance
+          Teams choose Accentra for reliable automation, cleaner reporting, and a finance
           workflow that feels refreshingly simple.
         </p>
       </div>

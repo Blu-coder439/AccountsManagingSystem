@@ -7,7 +7,7 @@
             <div>
                 <p class="mb-4 text-sm font-bold uppercase tracking-[0.28em] text-blue-300">Free Trial</p>
                 <h2 class="max-w-2xl text-4xl font-extrabold tracking-tight sm:text-5xl">
-                    Start using FinFlow with a 14-day free trial.
+                    Start using Accentra with a 14-day free trial.
                 </h2>
                 <p class="mt-6 max-w-2xl text-lg leading-relaxed text-slate-300">
                     Explore automated invoicing, clean reporting, and smarter expense tracking with no
@@ -22,13 +22,9 @@
                     <button
                         class="rounded-full bg-blue-500 px-7 py-3 text-sm font-semibold text-white transition hover:bg-blue-400"
                     >
-                        Start Free Trial
+                        GET STARTED
                     </button>
-                    <button
-                        class="rounded-full border border-white/20 bg-white/5 px-7 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
-                    >
-                        Book a Demo
-                    </button>
+                   
                 </div>
             </div>
 

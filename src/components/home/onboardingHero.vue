@@ -34,10 +34,7 @@
               class="px-8 py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all active:scale-95">
               Start Free Trial
             </button>
-            <button
-              class="px-8 py-4 bg-white text-white-900 font-bold rounded-xl border border-slate-200 hover:bg-slate-50 transition-all active:scale-95">
-              Book a Demo
-            </button>
+           
           </div>
 
           <div class="flex items-center gap-4">
@@ -46,7 +43,7 @@
                 src="https://i.pravatar.cc/100" alt="User">
             </div>
             <p class="text-sm text-white">
-              Join <span class="font-bold text-white">12,000+</span> businesses growing with FinFlow
+              Join <span class="font-bold text-white">12,000+</span> businesses growing with Accentra
             </p>
           </div>
         </div>
