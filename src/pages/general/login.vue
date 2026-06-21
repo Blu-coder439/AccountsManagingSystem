@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { apiUrl } from '@/utils/api-base';
 import { supabase } from '@/utils/supabase';
 import { syncCurrentUserProfile } from '@/utils/auth-session';
 
@@ -20,6 +21,26 @@ const successMessage = ref('');
 const router = useRouter();
 
 // --- METHODS ---
+const signInWithPassword = (loginEmail) => supabase.auth.signInWithPassword({
+    email: loginEmail,
+    password: password.value
+});
+
+const preparePasswordLogin = async (loginEmail) => {
+    const response = await fetch(apiUrl('/api/auth/prepare-login'), {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: loginEmail }),
+    });
+
+    if (!response.ok && response.status !== 404) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.details?.message || data.error || 'Could not prepare this account for login.');
+    }
+};
+
 const handleLogin = async () => {
     errorMessage.value = '';
     successMessage.value = '';
@@ -27,17 +48,22 @@ const handleLogin = async () => {
 
     try {
         const loginEmail = email.value.trim().toLowerCase();
-        const { error } = await supabase.auth.signInWithPassword({
-            email: loginEmail,
-            password: password.value
-        });
+        let { error } = await signInWithPassword(loginEmail);
 
         if (error) {
             if (error.status === 400) {
-                throw new Error('Invalid email or password.');
+                await preparePasswordLogin(loginEmail);
+                const retryResult = await signInWithPassword(loginEmail);
+                error = retryResult.error;
+
+                if (error?.status === 400) {
+                    throw new Error('Invalid email or password.');
+                }
             }
 
-            throw error;
+            if (error) {
+                throw error;
+            }
         }
 
         const currentUser = await syncCurrentUserProfile();

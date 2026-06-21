@@ -8,6 +8,7 @@ import { loadEnvFile, getEnv } from './lib/server/env.js';
 import { getOrSyncAppUserFromRequest } from './lib/server/app-user.js';
 import {
     createAutoConfirmedSupabaseUser,
+    ensureSupabaseUserCanPasswordLogin,
     getBearerToken,
     UnauthorizedError
 } from './lib/server/supabase.js';
@@ -241,11 +242,36 @@ const loginHandler = async (req, res) => {
     }
 };
 
+const prepareLoginHandler = async (req, res) => {
+    try {
+        const user = await ensureSupabaseUserCanPasswordLogin(req.body?.email);
+
+        if (!user) {
+            return res.status(404).json({ error: 'No Supabase Auth user was found for this email.' });
+        }
+
+        res.status(200).json({
+            message: 'Supabase Auth user is ready for password login.',
+            user: {
+                id: user.id,
+                email: user.email
+            }
+        });
+    } catch (err) {
+        console.error('Prepare login error:', err.message);
+        res.status(err.status || 500).json({
+            error: 'Could not prepare Supabase Auth user for password login.',
+            details: process.env.NODE_ENV === 'production' ? undefined : err.message
+        });
+    }
+};
+
 app.post('/signup', signupHandler);
 app.post('/api/auth/signup', signupHandler);
 
 app.post('/login', loginHandler);
 app.post('/api/auth/login', loginHandler);
+app.post('/api/auth/prepare-login', prepareLoginHandler);
 
 app.get('/processes', async (req, res) => {
     try {
