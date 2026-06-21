@@ -1,7 +1,6 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { apiUrl } from '@/utils/api-base';
 import { supabase } from '@/utils/supabase';
 import { syncCurrentUserProfile } from '@/utils/auth-session';
 
@@ -21,21 +20,6 @@ const successMessage = ref('');
 const router = useRouter();
 
 // --- METHODS ---
-const confirmEmailForTesting = async (loginEmail) => {
-    const response = await fetch(apiUrl('/api/auth/confirm-email'), {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: loginEmail }),
-    });
-    const data = await response.json();
-
-    if (!response.ok) {
-        throw new Error(data.details?.message || data.error || 'Could not confirm this account.');
-    }
-};
-
 const handleLogin = async () => {
     errorMessage.value = '';
     successMessage.value = '';
@@ -43,28 +27,17 @@ const handleLogin = async () => {
 
     try {
         const loginEmail = email.value.trim().toLowerCase();
-        let { error } = await supabase.auth.signInWithPassword({
+        const { error } = await supabase.auth.signInWithPassword({
             email: loginEmail,
             password: password.value
         });
 
         if (error) {
             if (error.status === 400) {
-                await confirmEmailForTesting(loginEmail);
-                const retryResult = await supabase.auth.signInWithPassword({
-                    email: loginEmail,
-                    password: password.value
-                });
-                error = retryResult.error;
-            }
-
-            if (error?.status === 400) {
                 throw new Error('Invalid email or password.');
             }
 
-            if (error) {
-                throw error;
-            }
+            throw error;
         }
 
         const currentUser = await syncCurrentUserProfile();

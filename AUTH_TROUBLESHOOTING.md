@@ -1,112 +1,87 @@
 # Authentication 400 Error Troubleshooting
 
 ## The Problem
+
 When logging in, you get this error:
-```
+
+```text
 POST https://jpuqopyiatzpxwrsygyz.supabase.co/auth/v1/token?grant_type=password 400 (Bad Request)
+```
+
+## Current Auth Flow
+
+Signup no longer requires the user to verify their email before logging in.
+
+```text
+1. SIGNUP (src/pages/general/signup.vue)
+   - User enters email and password
+   - Frontend calls /api/auth/signup
+   - Backend creates a Supabase Auth user with email_confirm: true
+   - Frontend signs in immediately with the password
+   - Frontend syncs the app profile
+
+2. LOGIN (src/pages/general/login.vue)
+   - User enters email and password
+   - Frontend calls supabase.auth.signInWithPassword()
+   - Supabase verifies credentials and returns an access token
+   - Frontend syncs the app profile to the backend
 ```
 
 ## Root Causes
 
-### 1. **Email Not Confirmed** (Most Common)
-After signing up, Supabase sends a confirmation email. Until you confirm your email:
-- ❌ You **cannot** log in
-- ✅ You **can** see the account was created
+### 1. Wrong Credentials
 
-**Fix:** Check your email inbox (and spam folder) for a confirmation link. Click it, then try logging in again.
+- Email or password does not match what was used at signup.
+- Fix: double-check spelling and remember passwords are case-sensitive.
 
-### 2. **Wrong Credentials**
-- Email or password doesn't match what was signed up with
-- **Fix:** Double-check spelling. Remember passwords are case-sensitive.
+### 2. User Does Not Exist
 
-### 3. **User Doesn't Exist**
-Tried to log in with an email that was never signed up
-- **Fix:** Sign up first before logging in
+- The email was never signed up or the Supabase Auth user was deleted.
+- Fix: sign up first or recreate the user in Supabase.
 
-### 4. **Supabase Configuration Issue**
-The project's Supabase settings have email confirmation enabled
-- **Fix:** Check Supabase dashboard > Authentication > Providers > Email
+### 3. Supabase Configuration Issue
 
----
+- The app may be pointed at the wrong Supabase project or using stale deployed environment variables.
+- Fix: check `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY`.
 
-## How the Auth Flow Works
+### 4. Legacy Unconfirmed User
 
-```
-1. SIGNUP (src/pages/general/signup.vue)
-   ├─ User enters email & password
-   ├─ POST to supabase.auth.signUp()
-   ├─ Supabase sends confirmation email
-   └─ User clicks link in email to confirm
-      
-2. LOGIN (src/pages/general/login.vue)
-   ├─ User enters email & password (ONLY after confirming email)
-   ├─ POST to supabase.auth.signInWithPassword()
-   ├─ Supabase verifies credentials
-   ├─ Returns access token
-   └─ Frontend syncs user profile to backend
-```
-
----
-
-## Testing Locally (Skip Email Confirmation)
-
-To allow instant login without email confirmation:
-
-### Option A: Disable Email Confirmation (Dev Only)
-1. Go to **Supabase Dashboard** > Authentication > Providers > Email
-2. Toggle **"Confirm email"** to OFF
-3. Now users can log in immediately after signup
-
-### Option B: Use Magic Links (No Password Verification)
-1. Update signup to use `signInWithOtp()` instead of `signUp()`
-2. Users get a magic link via email (instant if confirmation disabled)
-
-### Option C: Use Test Users
-1. Supabase dashboard > Authentication > Users
-2. Create a test user manually with "Auto confirm"
-3. Use this email/password to test login flow
-
----
+- Users created before this change may still be unconfirmed in Supabase Auth.
+- Fix: recreate the account through the current signup flow or manually confirm that one legacy user in the Supabase dashboard.
 
 ## Backend Auth Flow
 
-After login succeeds on frontend:
+After login succeeds on the frontend:
 
-```
-Frontend (browser):
+```text
+Frontend:
   supabase.auth.signInWithPassword()
-  ↓ (gets access token)
-  ↓
-  syncCurrentUserProfile() 
-  ↓ (sends Authorization: Bearer <token>)
-  
-Backend (server.js):
-  POST /api/auth/login
-  ├─ Extract Bearer token from Authorization header
-  ├─ Verify token with Supabase
-  ├─ Get authenticated user
-  ├─ Sync/create user in local database
-  └─ Return user profile
-```
+  -> receives access token
+  -> syncCurrentUserProfile()
+  -> sends Authorization: Bearer <token>
 
----
+Backend:
+  POST /api/auth/login
+  - Extract Bearer token
+  - Verify token with Supabase
+  - Get authenticated user
+  - Sync or create user in app database
+  - Return user profile
+```
 
 ## Debug Checklist
 
-- [ ] Check email for Supabase confirmation link
-- [ ] Did you click the confirmation link?
-- [ ] Email confirmation is enabled? (expected for production)
 - [ ] Correct email/password combo?
 - [ ] Same email used in signup?
-- [ ] Check browser console for full error message
-- [ ] Test with a new account via Supabase dashboard (manual creation)
-
----
+- [ ] User exists in Supabase Authentication > Users?
+- [ ] New signup was created through `/api/auth/signup`?
+- [ ] Supabase environment variables match the intended project?
+- [ ] Browser console and network tab show the exact Supabase error?
 
 ## Code References
 
-- **Frontend Signup:** `src/pages/general/signup.vue` (lines 64-77)
-- **Frontend Login:** `src/pages/general/login.vue` (lines 29-36)
-- **Supabase Client:** `src/utils/supabase.js`
-- **Backend Auth:** `api/auth/login.js` and `api/auth/signup.js`
-- **Session Sync:** `src/utils/auth-session.js`
+- Frontend Signup: `src/pages/general/signup.vue`
+- Frontend Login: `src/pages/general/login.vue`
+- Supabase Client: `src/utils/supabase.js`
+- Backend Auth: `api/auth/login.js` and `api/auth/signup.js`
+- Session Sync: `src/utils/auth-session.js`
