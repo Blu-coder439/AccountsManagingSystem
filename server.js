@@ -6,7 +6,12 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { loadEnvFile, getEnv } from './lib/server/env.js';
 import { getOrSyncAppUserFromRequest } from './lib/server/app-user.js';
-import { UnauthorizedError } from './lib/server/supabase.js';
+import {
+    confirmSupabaseUserEmail,
+    createAutoConfirmedSupabaseUser,
+    getBearerToken,
+    UnauthorizedError
+} from './lib/server/supabase.js';
 import { createPostgresSslConfig } from './lib/server/postgres-ssl.js';
 
 // Load environment variables first
@@ -170,6 +175,30 @@ const verifyPassword = (password, storedHash) => {
 
 const signupHandler = async (req, res) => {
     try {
+        if (!getBearerToken(toWebRequest(req)) && req.body?.password) {
+            const authUser = await createAutoConfirmedSupabaseUser({
+                email: req.body.email,
+                password: req.body.password,
+                userMetadata: {
+                    accountType: req.body.accountType || null,
+                    fullName: req.body.fullName || null,
+                    businessName: req.body.businessName || null,
+                    businessType: req.body.businessType || null,
+                    city: req.body.city || null,
+                    phone: req.body.phone || null
+                }
+            });
+
+            return res.status(201).json({
+                message: 'Supabase Auth user is ready for password login.',
+                user: {
+                    id: authUser.id,
+                    email: authUser.email,
+                    emailConfirmed: Boolean(authUser.email_confirmed_at)
+                }
+            });
+        }
+
         const user = await getOrSyncAppUserFromRequest(toWebRequest(req), req.body, {
             createIfMissing: true,
             touchLastLogin: false
@@ -184,6 +213,31 @@ const signupHandler = async (req, res) => {
         console.error('Database error:', err.message);
         res.status(500).json({
             error: 'Signup sync failed.',
+            details: process.env.NODE_ENV === 'production' ? undefined : err.message
+        });
+    }
+};
+
+const confirmEmailHandler = async (req, res) => {
+    try {
+        const user = await confirmSupabaseUserEmail(req.body?.email);
+
+        if (!user) {
+            return res.status(404).json({ error: 'No Supabase Auth user was found for this email.' });
+        }
+
+        res.status(200).json({
+            message: 'Supabase Auth email is confirmed.',
+            user: {
+                id: user.id,
+                email: user.email,
+                emailConfirmed: Boolean(user.email_confirmed_at)
+            }
+        });
+    } catch (err) {
+        console.error('Confirm email error:', err.message);
+        res.status(err.status || 500).json({
+            error: 'Could not confirm Supabase Auth email.',
             details: process.env.NODE_ENV === 'production' ? undefined : err.message
         });
     }
@@ -215,6 +269,7 @@ const loginHandler = async (req, res) => {
 
 app.post('/signup', signupHandler);
 app.post('/api/auth/signup', signupHandler);
+app.post('/api/auth/confirm-email', confirmEmailHandler);
 
 app.post('/login', loginHandler);
 app.post('/api/auth/login', loginHandler);

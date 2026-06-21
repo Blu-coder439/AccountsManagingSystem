@@ -1,7 +1,35 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const supabaseKey =
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
+
+const getSupabaseUrlHost = () => {
+  try {
+    return supabaseUrl ? new URL(supabaseUrl).host : null;
+  } catch {
+    return 'invalid-url';
+  }
+};
+
+const supabaseConfig = {
+  isConfigured: Boolean(supabaseUrl && supabaseKey),
+  urlHost: getSupabaseUrlHost(),
+  keyType: supabaseKey?.startsWith('sb_publishable_')
+    ? 'publishable'
+    : supabaseKey?.startsWith('eyJ')
+      ? 'jwt'
+      : supabaseKey
+        ? 'unknown'
+        : null,
+};
+
+const getSupabaseConfigSummary = () => ({
+  ...supabaseConfig,
+  origin: typeof window !== 'undefined' ? window.location.origin : null,
+});
 
 const makeStub = (message) => {
   const rejected = (action) => () => Promise.reject(new Error(`${message} — attempted: ${action}`));
@@ -42,4 +70,4 @@ if (!supabaseUrl || !supabaseKey) {
   supabase = createClient(supabaseUrl, supabaseKey);
 }
 
-export { supabase };
+export { supabase, getSupabaseConfigSummary };

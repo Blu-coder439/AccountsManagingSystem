@@ -24,14 +24,6 @@ export default defineConfig({
         target: 'http://localhost:3000',
         changeOrigin: true,
       },
-      '/login': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
-      '/signup': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
       '/processes': {
         target: 'http://localhost:3000',
         changeOrigin: true,

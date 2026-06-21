@@ -2,7 +2,8 @@
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { syncCurrentUserProfile } from '@/utils/auth-session';
-import { supabase } from '@/utils/supabase';
+import { apiUrl } from '@/utils/api-base';
+import { getSupabaseConfigSummary, supabase } from '@/utils/supabase';
 
 const inputStyles = "w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-600 transition-all placeholder:text-slate-300";
 const labelStyles = "block text-sm font-semibold text-slate-800 mb-1.5";
@@ -43,6 +44,17 @@ const normalizeEmail = (email) => email.trim().toLowerCase();
 const getSignupErrorMessage = (error) => {
   const message = error?.message || String(error);
   const code = error?.code || '';
+
+  if (error?.name === 'AuthRetryableFetchError' || error?.status === 0 || /failed to fetch/i.test(message)) {
+    const config = getSupabaseConfigSummary();
+    const target = config.urlHost || 'the configured Supabase project';
+
+    if (!config.isConfigured || config.urlHost === 'invalid-url') {
+      return 'Supabase is not configured correctly for this build. Check VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY, then rebuild and redeploy.';
+    }
+
+    return `Could not reach Supabase Auth at ${target}. Refresh the page to clear any old cached build, then try again. If it continues, check browser network blocking, the deployed Vercel env vars, and the Supabase project status.`;
+  }
 
   if (code === 'user_already_exists' || /already registered/i.test(message)) {
     return 'An account already exists for this email. Please log in instead.';
@@ -93,52 +105,56 @@ const submitSignup = async () => {
       profilePayload.businessType = form.value.businessType;
     }
 
-    const { data, error } = await supabase.auth.signUp({
+    const signupResponse = await fetch(apiUrl('/api/auth/signup'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...profilePayload,
+        password: form.value.password,
+      }),
+    });
+
+    const signupData = await signupResponse.json();
+
+    if (!signupResponse.ok) {
+      throw new Error(
+        signupData.details?.message ||
+          signupData.error ||
+          'Could not create your Supabase Auth account.',
+      );
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password: form.value.password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/login`,
-        data: {
-          accountType: profilePayload.accountType,
-          fullName: profilePayload.fullName || null,
-          businessName: profilePayload.businessName || null,
-          businessType: profilePayload.businessType || null,
-          city: profilePayload.city || null,
-          phone: profilePayload.phone || null,
-        },
-      },
     });
 
     if (error) {
-      console.error('Supabase signup error:', {
+      console.error('Supabase signup login error:', {
         code: error.code,
         name: error.name,
         status: error.status,
         message: error.message,
+        config: getSupabaseConfigSummary(),
       });
       throw error;
     }
 
-    if (data.session) {
-      try {
-        await syncCurrentUserProfile(profilePayload, '/api/auth/signup');
-      } catch (syncError) {
-        console.error('Signup profile sync error:', syncError);
-        errorMessage.value = getProfileSyncErrorMessage(syncError);
-        return;
-      }
-      successMessage.value = 'Account created successfully. Redirecting to dashboard...';
-    } else {
-      successMessage.value = 'Account created in Supabase Auth. Please confirm your email, then log in to finish creating your app profile.';
+    try {
+      await syncCurrentUserProfile(profilePayload, '/api/auth/signup');
+    } catch (syncError) {
+      console.error('Signup profile sync error:', syncError);
+      errorMessage.value = getProfileSyncErrorMessage(syncError);
+      return;
     }
 
+    successMessage.value = 'Account created successfully. Redirecting to dashboard...';
+
     setTimeout(() => {
-      if (data.session) {
-        router.push('/dashboard');
-      } else {
-        router.push('/login');
-      }
-    }, data.session ? 1000 : 2000);
+      router.push('/dashboard');
+    }, 1000);
   } catch (error) {
     errorMessage.value = error instanceof TypeError
       ? 'Could not reach the signup service. Make sure the backend is running locally or the deployment is configured correctly.'
