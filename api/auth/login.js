@@ -1,5 +1,11 @@
 import { getOrSyncAppUserFromRequest } from '../../lib/server/app-user.js';
-import { errorResponse, json, methodNotAllowed, parseJsonBody } from '../../lib/server/http.js';
+import {
+  errorResponse,
+  json,
+  methodNotAllowed,
+  parseJsonBody,
+  safeErrorDetails,
+} from '../../lib/server/http.js';
 import { UnauthorizedError } from '../../lib/server/supabase.js';
 
 export async function POST(request) {
@@ -25,7 +31,7 @@ export async function POST(request) {
     return errorResponse(
       500,
       'Login sync failed',
-      process.env.NODE_ENV === 'production' ? undefined : (error?.message || String(error)),
+      safeErrorDetails(error),
     );
   }
 }
