@@ -4,6 +4,9 @@ import { useRouter } from 'vue-router';
 import { syncCurrentUserProfile } from '@/utils/auth-session';
 import { supabase } from '@/utils/supabase';
 
+
+
+
 const inputStyles = "w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-600 transition-all placeholder:text-slate-300";
 const labelStyles = "block text-sm font-semibold text-slate-800 mb-1.5";
 
@@ -80,13 +83,10 @@ const submitSignup = async () => {
       throw error;
     }
 
-    if (data.session) {
-      await syncCurrentUserProfile(profilePayload, '/api/auth/signup');
-      successMessage.value = 'Account created successfully. Redirecting to dashboard...';
-    } else {
-      successMessage.value = 'Account created! A confirmation email has been sent. Please verify your email before logging in.';
-    }
-
+   // ✅ AFTER — Supabase only, no backend needed
+if (data.session) {
+  successMessage.value = 'Account created successfully. Redirecting...';
+}
     setTimeout(() => {
       if (data.session) {
         router.push('/dashboard');
