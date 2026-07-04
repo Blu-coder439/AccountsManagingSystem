@@ -5,6 +5,9 @@ import { syncCurrentUserProfile } from '@/utils/auth-session';
 import { apiUrl } from '@/utils/api-base';
 import { getSupabaseConfigSummary, supabase } from '@/utils/supabase';
 
+
+
+
 const inputStyles = "w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-600 transition-all placeholder:text-slate-300";
 const labelStyles = "block text-sm font-semibold text-slate-800 mb-1.5";
 
